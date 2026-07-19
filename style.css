@@ -112,6 +112,14 @@ html, body {
 .tool.action .tool-name { font-size: 13px; }
 .tool.danger { color: #ff9d9d; }
 
+.model-tool { min-width: 60px; }
+.swatch {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  margin-bottom: 3px;
+}
+
 #openBtn {
   min-width: 110px;
   font-size: 15px; font-weight: bold;

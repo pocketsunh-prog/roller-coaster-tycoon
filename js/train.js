@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {
   CELL, CAR_COUNT, CAR_SPACING, SEATS_PER_CAR,
   GRAVITY, FRICTION, CHAIN_SPEED, LAUNCH_SPEED, MAX_SPEED,
+  COASTER_MODELS, DEFAULT_MODEL,
 } from './config.js';
 
 const _v1 = new THREE.Vector3();
@@ -10,27 +11,90 @@ const _t1 = new THREE.Vector3();
 const _t2 = new THREE.Vector3();
 const _axis = new THREE.Vector3();
 
+function disposeGroup(g) {
+  g.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.material) o.material.dispose();
+  });
+}
+
 export class Train {
-  constructor(scene) {
+  constructor(scene, model = COASTER_MODELS[DEFAULT_MODEL]) {
+    this.scene = scene;
     this.group = new THREE.Group();
+    this.model = model;
     this.cars = [];
     this.seatHeads = [];
-    const bodyColors = [0xe74c3c, 0xf1c40f, 0x3498db, 0x9b59b6, 0x2ecc71];
+    this._buildCars();
+    scene.add(this.group);
+    this.track = null;
+    this.onArrive = null;
+    this.onDepart = null;
+    this.onScream = null;
+    this.reset(null);
+  }
+
+  _buildCars() {
+    for (const car of this.cars) { this.group.remove(car); disposeGroup(car); }
+    this.cars = [];
+    this.seatHeads = [];
+    const m = this.model;
+    const trimMat = new THREE.MeshStandardMaterial({ color: m.trimColor, roughness: 0.5 });
+    const barMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.4, metalness: 0.5 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0xbfe3ff, roughness: 0.1, metalness: 0.4 });
     for (let i = 0; i < CAR_COUNT; i++) {
       const car = new THREE.Group();
       const body = new THREE.Mesh(
         new THREE.BoxGeometry(1.25, 0.55, 2.1),
-        new THREE.MeshStandardMaterial({ color: bodyColors[i % bodyColors.length], roughness: 0.35, metalness: 0.2 })
+        new THREE.MeshStandardMaterial({ color: m.carColors[i % m.carColors.length], roughness: 0.35, metalness: 0.2 })
       );
       body.position.y = 0.62;
       body.castShadow = true;
       car.add(body);
-      const nose = new THREE.Mesh(
-        new THREE.BoxGeometry(1.0, 0.3, 0.5),
-        new THREE.MeshStandardMaterial({ color: 0x222831, roughness: 0.5 })
-      );
+      // Chassis skirt
+      const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.22, 1.9), trimMat);
+      chassis.position.y = 0.32;
+      car.add(chassis);
+      // Nose cone
+      const nose = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.3, 0.5), trimMat);
       nose.position.set(0, 0.42, 1.15);
       car.add(nose);
+      // Seat backs
+      const seatBack = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.4, 0.12), trimMat);
+      seatBack.position.set(0, 1.0, -0.62);
+      car.add(seatBack);
+      // Lap bar across the seats
+      const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1.05, 8), barMat);
+      bar.rotation.z = Math.PI / 2;
+      bar.position.set(0, 1.02, 0.18);
+      car.add(bar);
+      // Lead car: windshield + headlights
+      if (i === 0) {
+        const shield = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.34, 0.06), glassMat);
+        shield.position.set(0, 1.05, 0.95);
+        shield.rotation.x = -0.25;
+        car.add(shield);
+        for (const hx of [-0.4, 0.4]) {
+          const lamp = new THREE.Mesh(
+            new THREE.SphereGeometry(0.07, 8, 8),
+            new THREE.MeshStandardMaterial({ color: 0xfff6c9, emissive: 0xffee99, emissiveIntensity: 0.9 })
+          );
+          lamp.position.set(hx, 0.55, 1.42);
+          car.add(lamp);
+        }
+      }
+      // Hyper: rear spoiler on the last car
+      if (m.spoiler && i === CAR_COUNT - 1) {
+        const wing = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.06, 0.35), trimMat);
+        wing.position.set(0, 1.25, -1.0);
+        car.add(wing);
+        for (const sx of [-0.45, 0.45]) {
+          const strut = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.3, 0.06), trimMat);
+          strut.position.set(sx, 1.1, -1.0);
+          car.add(strut);
+        }
+      }
+      // Wheels
       const wg = new THREE.CylinderGeometry(0.16, 0.16, 0.12, 10);
       const wm = new THREE.MeshStandardMaterial({ color: 0x1b1b1b });
       for (const wx of [-0.62, 0.62]) {
@@ -41,12 +105,13 @@ export class Train {
           car.add(w);
         }
       }
+      // Rider heads
       for (let s = 0; s < SEATS_PER_CAR; s++) {
         const head = new THREE.Mesh(
           new THREE.SphereGeometry(0.22, 10, 10),
           new THREE.MeshStandardMaterial({ color: 0xf2c79b })
         );
-        head.position.set(s === 0 ? -0.32 : 0.32, 1.08, -0.1);
+        head.position.set(s === 0 ? -0.32 : 0.32, 1.14, -0.1);
         head.visible = false;
         car.add(head);
         this.seatHeads.push(head);
@@ -54,12 +119,12 @@ export class Train {
       this.group.add(car);
       this.cars.push(car);
     }
-    scene.add(this.group);
-    this.track = null;
-    this.onArrive = null;
-    this.onDepart = null;
-    this.onScream = null;
-    this.reset(null);
+  }
+
+  rebuild(model) {
+    this.model = model;
+    this._buildCars();
+    this.update(0);
   }
 
   reset(track) {
@@ -106,10 +171,11 @@ export class Train {
 
     if (this.state === 'running' && track.complete) {
       const slope = track.slopeAt(this.dist);
-      this.speed += (-GRAVITY * slope - FRICTION * this.speed) * dt;
+      const maxSpeed = this.model.maxSpeed || MAX_SPEED;
+      this.speed += (-GRAVITY * slope - FRICTION * (this.model.frictionMul || 1) * this.speed) * dt;
       if (track.isOnChain(this.dist) && this.speed < CHAIN_SPEED) this.speed = CHAIN_SPEED;
       if (this.speed < 0.5) this.speed = 0.5;
-      if (this.speed > MAX_SPEED) this.speed = MAX_SPEED;
+      if (this.speed > maxSpeed) this.speed = maxSpeed;
       this.dist += this.speed * dt;
       const total = track.path.total;
       if (this.dist >= total) this.dist -= total;

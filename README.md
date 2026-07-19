@@ -14,9 +14,10 @@ Then open `http://localhost:3000` in your browser.
 ## How to Play
 
 1. **Build** — Select a track piece from the toolbar and click on the grid to place it. Pieces must connect back to the station to form a complete circuit.
-2. **Open** — Once the circuit is complete, the ride opens automatically.
-3. **Set Price** — Adjust the ticket price. Higher excitement = more guests, but price too high and they'll refuse.
-4. **Earn** — Guests queue, board, and pay. Use earnings to expand your coaster.
+2. **Pick a model** — Choose a coaster model: **Steel** (classic), **Wooden** (slower, rattly), or **Hyper** (sleek and fast). Each has its own track, supports, and train style.
+3. **Open** — Once the circuit is complete, the ride opens automatically.
+4. **Set Price** — Adjust the ticket price. Higher excitement = more guests, but price too high and they'll refuse.
+5. **Earn** — Guests queue, board, and pay. Use earnings to expand your coaster.
 
 ### Controls
 

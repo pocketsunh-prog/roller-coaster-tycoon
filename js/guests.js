@@ -9,29 +9,87 @@ const EXIT_POINT = new THREE.Vector3(3, 0, -1.7);
 
 export const queueSlot = i => new THREE.Vector3(QUEUE_BASE.x, 0, QUEUE_BASE.z + 0.95 * i);
 
+const SKIN_TONES = [0xf2c79b, 0xe8b88a, 0xd9a066, 0xb07845, 0x8d5524];
+const HAIR_COLORS = [0x2c222b, 0x4a3221, 0x7a5230, 0xb55239, 0xd8d8d8, 0xe6c477];
+const HAT_COLORS = [0xd84545, 0x3f7fd9, 0x2ecc71, 0xf1c40f, 0xe67e22];
+
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
 function makeGuestMesh() {
   const g = new THREE.Group();
+  const skin = new THREE.Color(pick(SKIN_TONES));
   const shirt = new THREE.Color().setHSL(Math.random(), 0.7, 0.55);
+  const pants = new THREE.Color().setHSL(Math.random(), 0.4, 0.3);
+  const skinMat = new THREE.MeshLambertMaterial({ color: skin });
+
+  // Legs (pivot at hip for swing)
+  const legGeo = new THREE.BoxGeometry(0.13, 0.34, 0.13);
+  legGeo.translate(0, -0.17, 0);
+  const legMat = new THREE.MeshLambertMaterial({ color: pants });
+  const legs = [];
+  for (const lx of [-0.09, 0.09]) {
+    const leg = new THREE.Mesh(legGeo, legMat);
+    leg.position.set(lx, 0.36, 0);
+    leg.castShadow = true;
+    g.add(leg);
+    legs.push(leg);
+  }
+
+  // Torso
   const body = new THREE.Mesh(
     new THREE.CylinderGeometry(0.22, 0.28, 0.62, 8),
     new THREE.MeshLambertMaterial({ color: shirt })
   );
-  body.position.y = 0.55;
+  body.position.y = 0.67;
   body.castShadow = true;
   g.add(body);
-  const head = new THREE.Mesh(
-    new THREE.SphereGeometry(0.2, 10, 10),
-    new THREE.MeshLambertMaterial({ color: 0xf2c79b })
-  );
-  head.position.y = 1.05;
+
+  // Arms (pivot at shoulder for swing)
+  const armGeo = new THREE.CylinderGeometry(0.055, 0.05, 0.42, 6);
+  armGeo.translate(0, -0.21, 0);
+  const arms = [];
+  for (const ax of [-0.3, 0.3]) {
+    const arm = new THREE.Mesh(armGeo, new THREE.MeshLambertMaterial({ color: shirt }));
+    arm.position.set(ax, 0.94, 0);
+    arm.castShadow = true;
+    g.add(arm);
+    arms.push(arm);
+  }
+
+  // Head
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 10), skinMat);
+  head.position.y = 1.17;
   head.castShadow = true;
   g.add(head);
-  return g;
+
+  // Hair or hat (some bald)
+  const roll = Math.random();
+  if (roll < 0.22) {
+    const hatMat = new THREE.MeshLambertMaterial({ color: pick(HAT_COLORS) });
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.23, 0.04, 10), hatMat);
+    brim.position.y = 1.32;
+    g.add(brim);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2), hatMat);
+    cap.position.y = 1.32;
+    g.add(cap);
+  } else if (roll < 0.85) {
+    const hair = new THREE.Mesh(
+      new THREE.SphereGeometry(0.215, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2.2),
+      new THREE.MeshLambertMaterial({ color: pick(HAIR_COLORS) })
+    );
+    hair.position.y = 1.2;
+    g.add(hair);
+  }
+
+  return { group: g, arms, legs };
 }
 
 class Guest {
   constructor(scene, pos, state) {
-    this.mesh = makeGuestMesh();
+    const parts = makeGuestMesh();
+    this.mesh = parts.group;
+    this.arms = parts.arms;
+    this.legs = parts.legs;
     this.mesh.position.copy(pos);
     this.state = state; // entering | deciding | toQueue | queuing | boarding | leaving
     this.speed = 2.2 + Math.random() * 0.9;
@@ -61,7 +119,12 @@ class Guest {
       this.mesh.rotation.y = Math.atan2(dx, dz);
     }
     this.bob += dt * 10;
-    p.y = Math.abs(Math.sin(this.bob)) * 0.06;
+    const swing = Math.sin(this.bob);
+    p.y = Math.abs(swing) * 0.06;
+    this.arms[0].rotation.x = swing * 0.7;
+    this.arms[1].rotation.x = -swing * 0.7;
+    this.legs[0].rotation.x = -swing * 0.8;
+    this.legs[1].rotation.x = swing * 0.8;
   }
 }
 

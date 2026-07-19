@@ -49,6 +49,7 @@
       <li><b>Z</b> zoom in &nbsp; <b>X</b> zoom out &nbsp; <b>V</b> save &nbsp; <b>L</b> load</li>
       <li><b>Mouse</b> drag = rotate, wheel = zoom, right-drag = pan, click ghost = build</li>
       <li>Up slopes have chain lifts. Higher ticket price = fewer guests willing to pay.</li>
+      <li>Pick a coaster model (Steel / Wooden / Hyper) — each has its own look and speed.</li>
     </ul>
   </div>
 
@@ -60,6 +61,11 @@
       <button class="tool" data-piece="right"><span class="tool-icon">&#8630;</span><span class="tool-name">Right</span><span class="tool-cost">$60</span><span class="tool-key">3</span></button>
       <button class="tool" data-piece="up"><span class="tool-icon">&#8599;</span><span class="tool-name">Up (chain)</span><span class="tool-cost">$70</span><span class="tool-key">4</span></button>
       <button class="tool" data-piece="down"><span class="tool-icon">&#8600;</span><span class="tool-name">Down</span><span class="tool-cost">$70</span><span class="tool-key">5</span></button>
+    </div>
+    <div class="tool-group">
+      <button class="tool model-tool selected" data-model="steel"><span class="swatch" style="background:#d84545"></span><span class="tool-name">Steel</span></button>
+      <button class="tool model-tool" data-model="wooden"><span class="swatch" style="background:#8b5e34"></span><span class="tool-name">Wooden</span></button>
+      <button class="tool model-tool" data-model="hyper"><span class="swatch" style="background:#3f7fd9"></span><span class="tool-name">Hyper</span></button>
     </div>
     <div class="tool-group">
       <button id="undoBtn" class="tool action"><span class="tool-name">Undo</span><span class="tool-key">U</span></button>

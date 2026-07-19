@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CELL } from './config.js';
+import { CELL, COASTER_MODELS, DEFAULT_MODEL } from './config.js';
 
 export const GAUGE = 1.3;
 
@@ -10,7 +10,7 @@ const _side = new THREE.Vector3();
 const _tmp = new THREE.Vector3();
 
 // Build rails + ties + supports as instanced meshes from the track path.
-export function buildTrackGroup(track) {
+export function buildTrackGroup(track, model = COASTER_MODELS[DEFAULT_MODEL]) {
   const group = new THREE.Group();
   const P = track.path, pts = P.pts, N = pts.length;
   if (N < 2) return group;
@@ -37,7 +37,7 @@ export function buildTrackGroup(track) {
 
   // Rails (two per segment)
   const railGeo = new THREE.BoxGeometry(0.13, 0.16, 1);
-  const railMat = new THREE.MeshStandardMaterial({ color: 0xd84545, roughness: 0.4, metalness: 0.6 });
+  const railMat = new THREE.MeshStandardMaterial({ color: model.railColor, roughness: 0.4, metalness: 0.6 });
   const rails = new THREE.InstancedMesh(railGeo, railMat, segCount * 2);
   let idx = 0;
   for (let i = 0; i < segCount; i++) {
@@ -59,8 +59,9 @@ export function buildTrackGroup(track) {
   group.add(rails);
 
   // Ties
-  const tieGeo = new THREE.BoxGeometry(GAUGE + 0.7, 0.09, 0.42);
-  const tieMat = new THREE.MeshStandardMaterial({ color: 0x8a8f98, roughness: 0.8 });
+  const [tw, th, td] = model.tieScale;
+  const tieGeo = new THREE.BoxGeometry((GAUGE + 0.7) * tw, 0.09 * th, 0.42 * td);
+  const tieMat = new THREE.MeshStandardMaterial({ color: model.tieColor, roughness: 0.8 });
   const ties = new THREE.InstancedMesh(tieGeo, tieMat, Math.max(1, tiePos.length));
   for (let k = 0; k < tiePos.length; k++) {
     const [x, y, z, si] = tiePos[k];
@@ -78,8 +79,10 @@ export function buildTrackGroup(track) {
 
   // Supports
   if (supportPos.length) {
-    const supGeo = new THREE.CylinderGeometry(0.16, 0.2, 1, 8);
-    const supMat = new THREE.MeshStandardMaterial({ color: 0x6b7280, roughness: 0.7, metalness: 0.3 });
+    const supGeo = model.supportShape === 'box'
+      ? new THREE.BoxGeometry(0.34, 1, 0.34)
+      : new THREE.CylinderGeometry(0.16, 0.2, 1, 8);
+    const supMat = new THREE.MeshStandardMaterial({ color: model.supportColor, roughness: 0.7, metalness: 0.3 });
     const sups = new THREE.InstancedMesh(supGeo, supMat, supportPos.length);
     for (let k = 0; k < supportPos.length; k++) {
       const p = supportPos[k];
@@ -96,7 +99,7 @@ export function buildTrackGroup(track) {
 }
 
 // Station platform, posts and roof (static, at cell 0,0 facing +X)
-export function buildStationMesh() {
+export function buildStationMesh(model = COASTER_MODELS[DEFAULT_MODEL]) {
   const g = new THREE.Group();
   const platMat = new THREE.MeshStandardMaterial({ color: 0xc9a26b, roughness: 0.9 });
   for (const s of [-1, 1]) {
@@ -105,7 +108,7 @@ export function buildStationMesh() {
     plat.castShadow = plat.receiveShadow = true;
     g.add(plat);
   }
-  const postMat = new THREE.MeshStandardMaterial({ color: 0x3f5e8c, roughness: 0.6 });
+  const postMat = new THREE.MeshStandardMaterial({ color: model.supportColor, roughness: 0.6 });
   for (const px of [0.6, CELL - 0.6]) {
     for (const pz of [-2.3, 2.3]) {
       const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 4.2, 8), postMat);
@@ -116,7 +119,7 @@ export function buildStationMesh() {
   }
   const roof = new THREE.Mesh(
     new THREE.BoxGeometry(CELL + 1.8, 0.25, 5.8),
-    new THREE.MeshStandardMaterial({ color: 0xd84545, roughness: 0.6 })
+    new THREE.MeshStandardMaterial({ color: model.railColor, roughness: 0.6 })
   );
   roof.position.set(CELL / 2, 4.35, 0);
   roof.castShadow = true;

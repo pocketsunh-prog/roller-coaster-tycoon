@@ -7,7 +7,7 @@ import { GuestSystem } from './guests.js';
 import { buildScenery } from './scenery.js';
 import { UI } from './ui.js';
 import { sfx } from './audio.js';
-import { START_CASH } from './config.js';
+import { START_CASH, COASTER_MODELS, DEFAULT_MODEL } from './config.js';
 
 const PIECE_ORDER = ['straight', 'left', 'right', 'up', 'down'];
 const SAVE_KEY = 'coasterTycoonSave';
@@ -40,6 +40,7 @@ class Game {
     this.price = 5;
     this.rideOpen = false;
     this.selected = 'straight';
+    this.model = DEFAULT_MODEL;
     this.rides = 0;
     this._boardTimer = 0;
     this._departTimer = 0;
@@ -47,13 +48,14 @@ class Game {
     // World
     this.track = new Track();
     this.scenery = buildScenery(this.scene);
-    this.scene.add(buildStationMesh());
+    this.station = null;
+    this.rebuildStation();
 
     this.trackGroup = null;
     this.ghost = null;
     this.rebuildTrackMesh();
 
-    this.train = new Train(this.scene);
+    this.train = new Train(this.scene, COASTER_MODELS[this.model]);
     this.train.reset(this.track);
     this.train.onArrive = () => this.onTrainArrive();
     this.train.onDepart = () => { sfx.depart(); this.rides++; };
@@ -130,8 +132,31 @@ class Game {
         if (o.material) o.material.dispose();
       });
     }
-    this.trackGroup = buildTrackGroup(this.track);
+    this.trackGroup = buildTrackGroup(this.track, COASTER_MODELS[this.model]);
     this.scene.add(this.trackGroup);
+  }
+
+  rebuildStation() {
+    if (this.station) {
+      this.scene.remove(this.station);
+      this.station.traverse(o => {
+        if (o.geometry) o.geometry.dispose();
+        if (o.material) o.material.dispose();
+      });
+    }
+    this.station = buildStationMesh(COASTER_MODELS[this.model]);
+    this.scene.add(this.station);
+  }
+
+  setModel(id) {
+    if (!COASTER_MODELS[id] || id === this.model) return;
+    this.model = id;
+    this.train.rebuild(COASTER_MODELS[id]);
+    this.rebuildTrackMesh();
+    this.rebuildStation();
+    this.ui.toast(COASTER_MODELS[id].name + ' coaster selected');
+    sfx.place();
+    this.save(true); // autosave
   }
 
   updateGhost() {
@@ -211,6 +236,7 @@ class Game {
       price: this.price,
       rides: this.rides,
       rideOpen: this.rideOpen,
+      model: this.model,
     };
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -237,8 +263,11 @@ class Game {
     this.cash = typeof data.cash === 'number' ? data.cash : START_CASH;
     this.price = Math.max(1, Math.min(20, data.price || 5));
     this.rides = data.rides || 0;
+    this.model = COASTER_MODELS[data.model] ? data.model : DEFAULT_MODEL;
+    this.train.rebuild(COASTER_MODELS[this.model]);
     this.train.reset(this.track);
     this.rebuildTrackMesh();
+    this.rebuildStation();
     this.updateGhost();
     if (data.rideOpen && this.track.complete) this.openRide();
     this.ui.toast('Game loaded!');

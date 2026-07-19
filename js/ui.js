@@ -16,6 +16,10 @@ export class UI {
     document.querySelectorAll('[data-piece]').forEach(btn => {
       btn.addEventListener('click', () => game.tryPlace(btn.dataset.piece));
     });
+    // Model buttons switch coaster style
+    document.querySelectorAll('[data-model]').forEach(btn => {
+      btn.addEventListener('click', () => game.setModel(btn.dataset.model));
+    });
     this.$('undoBtn').addEventListener('click', () => game.undo());
     this.$('clearBtn').addEventListener('click', () => game.clearAll());
     this.$('zoomInBtn').addEventListener('click', () => game.zoomIn());
@@ -63,6 +67,10 @@ export class UI {
     // Highlight the selected piece
     document.querySelectorAll('[data-piece]').forEach(btn => {
       btn.classList.toggle('selected', btn.dataset.piece === g.selected);
+    });
+    // Highlight the selected model
+    document.querySelectorAll('[data-model]').forEach(btn => {
+      btn.classList.toggle('selected', btn.dataset.model === g.model);
     });
   }
 }

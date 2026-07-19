@@ -18,10 +18,10 @@ Coaster Tycoon 3D is a browser-based 3D roller-coaster tycoon game built with Th
 ### Core Systems (all receive a reference to `Game`)
 | File | Responsibility |
 |------|---------------|
-| `js/config.js` | All tunable constants — physics, costs, grid limits, capacities |
+| `js/config.js` | All tunable constants — physics, costs, grid limits, capacities, `COASTER_MODELS` |
 | `js/track.js` | Track model: piece types, placement rules, path geometry |
-| `js/trackmesh.js` | Instanced rail/tie/support meshes + ghost preview rendering |
-| `js/train.js` | Train physics: gravity, friction, chain lift, banking, braking |
+| `js/trackmesh.js` | Instanced rail/tie/support meshes + ghost preview rendering (model-aware) |
+| `js/train.js` | Train physics: gravity, friction, chain lift, banking, braking, scream triggers; model-specific car detail |
 | `js/guests.js` | Guest AI: spawning, queueing, boarding, budget decisions |
 | `js/scenery.js` | Ground, grid, lights, sky, trees, clouds, entrance path |
 | `js/ui.js` | HUD updates, toast notifications, toolbar event wiring |
@@ -46,7 +46,8 @@ Coaster Tycoon 3D is a browser-based 3D roller-coaster tycoon game built with Th
 
 ## Gameplay Summary
 - Build track pieces (straight, left, right, up/chain, down) on a grid
+- Choose a coaster model (Steel / Wooden / Hyper) — different visuals, friction, and top speed; saved with the game
 - Complete a circuit back to the station to open the ride
-- Train runs with gravity-driven physics; chain lifts pull uphill
+- Train runs with gravity-driven physics; chain lifts pull uphill; riders scream on hill crests and steep drops
 - Guests spawn based on excitement rating, queue, board, pay tickets
 - Economy: start with $5,000, pieces cost $40–$70, undo gives full refund

@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { Track } from '../js/track.js';
 import { Train } from '../js/train.js';
-import { CELL } from '../js/config.js';
+import { CELL, COASTER_MODELS, CAR_COUNT } from '../js/config.js';
 
 let failures = 0;
 function assert(cond, msg) {
@@ -113,6 +113,30 @@ simTime = 0;
 while (simTime < 300 && !hArrived) { hillTrain.update(dt); simTime += dt; }
 assert(hArrived, `hilly lap completed (${simTime.toFixed(1)}s)`);
 assert(hillTrain.maxSpeed > 10, `hill train hit good speed (${hillTrain.maxSpeed.toFixed(1)})`);
+
+// --- 4b. Model physics: hyper faster than wooden on the same hill ----------------
+console.log('Coaster models:');
+function lapMaxSpeed(modelId) {
+  const t = new Train(new THREE.Scene(), COASTER_MODELS[modelId]);
+  t.reset(hill);
+  t.startBoarding();
+  t.riders = 2;
+  t.depart();
+  let done = false;
+  t.onArrive = () => { done = true; };
+  let s = 0;
+  while (s < 300 && !done) { t.update(dt); s += dt; }
+  return { done, max: t.maxSpeed };
+}
+const hyper = lapMaxSpeed('hyper');
+const wooden = lapMaxSpeed('wooden');
+assert(hyper.done, 'hyper completed hilly lap');
+assert(wooden.done, 'wooden completed hilly lap');
+assert(hyper.max > wooden.max, `hyper (${hyper.max.toFixed(1)}) faster than wooden (${wooden.max.toFixed(1)})`);
+const swapped = new Train(new THREE.Scene());
+swapped.reset(hill);
+swapped.rebuild(COASTER_MODELS.wooden);
+assert(swapped.model === COASTER_MODELS.wooden && swapped.cars.length === CAR_COUNT, 'rebuild swaps model and keeps cars');
 
 // --- 5. Save / load round trip ------------------------------------------------
 console.log('Save / load:');
