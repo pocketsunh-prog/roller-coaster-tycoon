@@ -57,6 +57,7 @@ class Game {
     this.train.reset(this.track);
     this.train.onArrive = () => this.onTrainArrive();
     this.train.onDepart = () => { sfx.depart(); this.rides++; };
+    this.train.onScream = () => sfx.scream(this.train.riders);
 
     this.guests = new GuestSystem(this.scene, this);
     this.ui = new UI(this);

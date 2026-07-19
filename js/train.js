@@ -58,6 +58,7 @@ export class Train {
     this.track = null;
     this.onArrive = null;
     this.onDepart = null;
+    this.onScream = null;
     this.reset(null);
   }
 
@@ -71,6 +72,8 @@ export class Train {
     this.maxSpeed = 0;
     this._lapDone = false;
     this._roll = 0;
+    this._prevSlope = 0;
+    this._screamCooldown = 0;
     this.update(0);
   }
 
@@ -112,6 +115,16 @@ export class Train {
       if (this.dist >= total) this.dist -= total;
       if (this.dist > CELL + 2) this._lapDone = true;
       if (this.speed > this.maxSpeed) this.maxSpeed = this.speed;
+
+      // Scream when cresting a hill or plunging down a steep drop
+      this._screamCooldown -= dt;
+      const cresting = this._prevSlope > 0.12 && slope < -0.05;
+      const plunging = slope < -0.45 && this.speed > CHAIN_SPEED + 2;
+      if (this.riders > 0 && this._screamCooldown <= 0 && (cresting || plunging)) {
+        this._screamCooldown = 1.8;
+        if (this.onScream) this.onScream();
+      }
+      this._prevSlope = slope;
 
       // Brake into the station each lap
       if (this._lapDone && this.dist >= 0 && this.dist < CELL) {
