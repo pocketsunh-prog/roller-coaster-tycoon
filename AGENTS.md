@@ -45,9 +45,10 @@ Coaster Tycoon 3D is a browser-based 3D roller-coaster tycoon game built with Th
 - Run with `node test/track.test.mjs`
 
 ## Gameplay Summary
-- Build track pieces (straight, left, right, up/chain, down) on a grid
+- Build track pieces (straight, left, right, up/chain, down, roll) on a grid
+- Roll pieces carry a per-point roll angle in `path.rolls`; meshes and cars use rolled basis frames
 - Choose a coaster model (Steel / Wooden / Hyper) — different visuals, friction, and top speed; saved with the game
 - Complete a circuit back to the station to open the ride
-- Train runs with gravity-driven physics; chain lifts pull uphill; riders scream on hill crests and steep drops
+- Train runs with gravity-driven physics; chain lifts pull uphill; riders scream on hill crests, steep drops, and fast rolls
 - Guests spawn based on excitement rating, queue, board, pay tickets
-- Economy: start with $5,000, pieces cost $40–$70, undo gives full refund
+- Economy: start with $5,000, pieces cost $40–$120, undo gives full refund

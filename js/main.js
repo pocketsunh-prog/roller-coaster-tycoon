@@ -9,7 +9,7 @@ import { UI } from './ui.js';
 import { sfx } from './audio.js';
 import { START_CASH, COASTER_MODELS, DEFAULT_MODEL } from './config.js';
 
-const PIECE_ORDER = ['straight', 'left', 'right', 'up', 'down'];
+const PIECE_ORDER = ['straight', 'left', 'right', 'up', 'down', 'roll'];
 const SAVE_KEY = 'coasterTycoonSave';
 
 class Game {
@@ -282,7 +282,7 @@ class Game {
 
   onKey(e) {
     if (e.target.tagName === 'INPUT') return;
-    const i = ['1', '2', '3', '4', '5'].indexOf(e.key);
+    const i = ['1', '2', '3', '4', '5', '6'].indexOf(e.key);
     if (i >= 0) { this.tryPlace(PIECE_ORDER[i]); return; }
     switch (e.key.toLowerCase()) {
       case 'q': this.cycleSelection(-1); break;

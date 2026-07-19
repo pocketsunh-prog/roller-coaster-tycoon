@@ -10,6 +10,12 @@ const _v2 = new THREE.Vector3();
 const _t1 = new THREE.Vector3();
 const _t2 = new THREE.Vector3();
 const _axis = new THREE.Vector3();
+const _up = new THREE.Vector3(0, 1, 0);
+const _side = new THREE.Vector3();
+const _upv = new THREE.Vector3();
+const _q = new THREE.Quaternion();
+const _m4 = new THREE.Matrix4();
+const _ro = { value: 0 };
 
 function disposeGroup(g) {
   g.traverse(o => {
@@ -182,11 +188,13 @@ export class Train {
       if (this.dist > CELL + 2) this._lapDone = true;
       if (this.speed > this.maxSpeed) this.maxSpeed = this.speed;
 
-      // Scream when cresting a hill or plunging down a steep drop
+      // Scream when cresting a hill, plunging, or spinning through a roll
       this._screamCooldown -= dt;
       const cresting = this._prevSlope > 0.12 && slope < -0.05;
       const plunging = slope < -0.45 && this.speed > CHAIN_SPEED + 2;
-      if (this.riders > 0 && this._screamCooldown <= 0 && (cresting || plunging)) {
+      const spinning = Math.abs(track.rollAt(this.dist + 0.6) - track.rollAt(this.dist - 0.6)) > 1.2
+        && this.speed > CHAIN_SPEED;
+      if (this.riders > 0 && this._screamCooldown <= 0 && (cresting || plunging || spinning)) {
         this._screamCooldown = 1.8;
         if (this.onScream) this.onScream();
       }
@@ -232,10 +240,19 @@ export class Train {
     const dd = clamped || !track.complete
       ? Math.max(0.02, Math.min(total - 0.02, d))
       : ((d % total) + total) % total;
-    const pos = track.posAt(dd, _v1, _t1);
-    pos.y += 0.42;
+    const pos = track.posAt(dd, _v1, _t1, _ro);
+    // Rolled frame: rotate side/up around the tangent by the track roll
+    _side.crossVectors(_up, _t1).normalize();
+    _upv.crossVectors(_t1, _side).normalize();
+    if (_ro.value) {
+      _q.setFromAxisAngle(_t1, _ro.value);
+      _side.applyQuaternion(_q);
+      _upv.applyQuaternion(_q);
+    }
+    pos.addScaledVector(_upv, 0.42);
     car.position.copy(pos);
-    car.lookAt(_v2.copy(pos).add(_t1));
+    _m4.makeBasis(_side, _upv, _t1);
+    car.quaternion.setFromRotationMatrix(_m4);
 
     // Banking: lean into curves proportional to v^2 * curvature
     if (dt > 0 && track.complete) {

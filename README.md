@@ -36,10 +36,11 @@ Then open `http://localhost:3000` in your browser.
 | Piece | Cost | Description |
 |-------|------|-------------|
 | Straight | $40 | Flat track segment |
-| Left Turn | $50 | Curves left |
-| Right Turn | $50 | Curves right |
+| Left Turn | $60 | Curves left |
+| Right Turn | $60 | Curves right |
 | Up (Chain) | $70 | Climbs uphill with chain lift |
-| Down | $40 | Drops downhill (gravity-powered) |
+| Down | $70 | Drops downhill (gravity-powered) |
+| Roll | $120 | 360° barrel roll |
 
 ## Tech Stack
 

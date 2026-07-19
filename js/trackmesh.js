@@ -7,7 +7,25 @@ const _dummy = new THREE.Object3D();
 const _up = new THREE.Vector3(0, 1, 0);
 const _tan = new THREE.Vector3();
 const _side = new THREE.Vector3();
-const _tmp = new THREE.Vector3();
+const _upv = new THREE.Vector3();
+const _sideB = new THREE.Vector3();
+const _upB = new THREE.Vector3();
+const _q = new THREE.Quaternion();
+const _m4 = new THREE.Matrix4();
+
+const TWO_PI = Math.PI * 2;
+const wrapAngle = a => a - Math.round(a / TWO_PI) * TWO_PI;
+
+// Rolled frame: side/up rotated by roll around the tangent.
+function rolledFrame(tan, roll, side, up) {
+  side.crossVectors(_up, tan).normalize();
+  up.crossVectors(tan, side).normalize();
+  if (roll) {
+    _q.setFromAxisAngle(tan, roll);
+    side.applyQuaternion(_q);
+    up.applyQuaternion(_q);
+  }
+}
 
 // Build rails + ties + supports as instanced meshes from the track path.
 export function buildTrackGroup(track, model = COASTER_MODELS[DEFAULT_MODEL]) {
@@ -25,7 +43,7 @@ export function buildTrackGroup(track, model = COASTER_MODELS[DEFAULT_MODEL]) {
     acc += l;
     while (acc >= nextTie) {
       const t = 1 - (acc - nextTie) / l;
-      tiePos.push([a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t, i]);
+      tiePos.push([a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t, i, t]);
       nextTie += 0.9;
     }
   }
@@ -36,6 +54,7 @@ export function buildTrackGroup(track, model = COASTER_MODELS[DEFAULT_MODEL]) {
   }
 
   // Rails (two per segment)
+  const rolls = P.rolls;
   const railGeo = new THREE.BoxGeometry(0.13, 0.16, 1);
   const railMat = new THREE.MeshStandardMaterial({ color: model.railColor, roughness: 0.4, metalness: 0.6 });
   const rails = new THREE.InstancedMesh(railGeo, railMat, segCount * 2);
@@ -45,12 +64,17 @@ export function buildTrackGroup(track, model = COASTER_MODELS[DEFAULT_MODEL]) {
     _tan.subVectors(b, a);
     const l = _tan.length();
     _tan.normalize();
-    _side.crossVectors(_up, _tan).normalize();
+    // Average the rolled frames of both endpoints, then re-orthogonalize
+    rolledFrame(_tan, rolls[i], _side, _upv);
+    rolledFrame(_tan, rolls[(i + 1) % N], _sideB, _upB);
+    _upv.add(_upB).normalize();
+    _side.crossVectors(_upv, _tan).normalize();
+    _upv.crossVectors(_tan, _side).normalize();
+    _m4.makeBasis(_side, _upv, _tan);
     for (const s of [-1, 1]) {
-      _dummy.position.lerpVectors(a, b, 0.5).addScaledVector(_side, s * GAUGE / 2);
-      _dummy.position.y += 0.14;
+      _dummy.position.lerpVectors(a, b, 0.5).addScaledVector(_side, s * GAUGE / 2).addScaledVector(_upv, 0.14);
+      _dummy.quaternion.setFromRotationMatrix(_m4);
       _dummy.scale.set(1, 1, Math.max(0.01, l + 0.03));
-      _dummy.lookAt(_tmp.copy(_dummy.position).add(_tan));
       _dummy.updateMatrix();
       rails.setMatrixAt(idx++, _dummy.matrix);
     }
@@ -64,12 +88,15 @@ export function buildTrackGroup(track, model = COASTER_MODELS[DEFAULT_MODEL]) {
   const tieMat = new THREE.MeshStandardMaterial({ color: model.tieColor, roughness: 0.8 });
   const ties = new THREE.InstancedMesh(tieGeo, tieMat, Math.max(1, tiePos.length));
   for (let k = 0; k < tiePos.length; k++) {
-    const [x, y, z, si] = tiePos[k];
+    const [x, y, z, si, st] = tiePos[k];
     const a = pts[si], b = pts[(si + 1) % N];
     _tan.subVectors(b, a).normalize();
-    _dummy.position.set(x, y + 0.02, z);
+    const roll = rolls[si] + wrapAngle(rolls[(si + 1) % N] - rolls[si]) * st;
+    rolledFrame(_tan, roll, _side, _upv);
+    _m4.makeBasis(_side, _upv, _tan);
+    _dummy.position.set(x, y, z).addScaledVector(_upv, 0.02);
+    _dummy.quaternion.setFromRotationMatrix(_m4);
     _dummy.scale.set(1, 1, 1);
-    _dummy.lookAt(_tmp.set(x + _tan.x, y + _tan.y, z + _tan.z));
     _dummy.updateMatrix();
     ties.setMatrixAt(k, _dummy.matrix);
   }

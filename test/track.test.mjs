@@ -138,6 +138,31 @@ swapped.reset(hill);
 swapped.rebuild(COASTER_MODELS.wooden);
 assert(swapped.model === COASTER_MODELS.wooden && swapped.cars.length === CAR_COUNT, 'rebuild swaps model and keeps cars');
 
+// --- 4c. Barrel roll piece -------------------------------------------------------
+console.log('Barrel roll:');
+const ROLL_LOOP = FLAT_LOOP.map(t => t === 'straight' ? t : t);
+ROLL_LOOP[1] = 'roll'; // swap one flat straight for a roll
+const rollTrack = buildLoop(ROLL_LOOP, 'roll');
+assert(rollTrack && rollTrack.complete, 'circuit with roll piece completes');
+// rollAt should sweep 0 -> 2pi across the roll piece, upside-down at the middle
+const rollPiece = rollTrack.pieces[2]; // station, straight, then roll
+assert(rollPiece.type === 'roll', 'third piece is the roll');
+// Find path distance at the middle of the roll piece via its sample index
+const rollMidDist = rollTrack.path.cum[12 + 12]; // station 6 + straight 6 + half of 24 roll samples
+const midRoll = rollTrack.rollAt(rollMidDist);
+assert(Math.abs(Math.abs(midRoll) - Math.PI) < 0.4, `upside-down mid-roll (roll=${midRoll.toFixed(2)})`);
+assert(Math.abs(rollTrack.rollAt(rollTrack.path.cum[12])) < 0.01, 'upright at roll entry');
+const rollTrain = new Train(new THREE.Scene());
+rollTrain.reset(rollTrack);
+rollTrain.startBoarding();
+rollTrain.riders = 4;
+rollTrain.depart();
+let rArrived = false;
+rollTrain.onArrive = () => { rArrived = true; };
+simTime = 0;
+while (simTime < 300 && !rArrived) { rollTrain.update(dt); simTime += dt; }
+assert(rArrived, `train completed lap with roll (${simTime.toFixed(1)}s)`);
+
 // --- 5. Save / load round trip ------------------------------------------------
 console.log('Save / load:');
 const saved = track.serialize();

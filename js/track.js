@@ -47,12 +47,21 @@ export const PIECES = {
     point: t => { const a = HALF_PI * t; return [CELL * Math.sin(a), 0, CELL - CELL * Math.cos(a)]; },
     exitOffset: [1, 1], exitDirDelta: 1, exitLevelDelta: 0,
   },
+  roll: { // barrel roll: flat, twists 360 degrees
+    cost: COSTS.roll, chain: false,
+    point: t => [CELL * t, 0, 0],
+    roll: t => Math.PI * 2 * t,
+    exitOffset: [1, 0], exitDirDelta: 0, exitLevelDelta: 0,
+  },
 };
 
-const SAMPLES = { station: 6, straight: 6, up: 12, down: 12, left: 16, right: 16 };
+const SAMPLES = { station: 6, straight: 6, up: 12, down: 12, left: 16, right: 16, roll: 24 };
+const TWO_PI = Math.PI * 2;
+const wrapAngle = a => a - Math.round(a / TWO_PI) * TWO_PI;
 
 const _tmpA = new THREE.Vector3();
 const _tmpB = new THREE.Vector3();
+const _ro = { value: 0 };
 
 export class Track {
   constructor() { this.reset(); }
@@ -143,15 +152,18 @@ export class Track {
 
   rebuildPath() {
     const pts = [];
+    const rolls = [];
     const chainIdx = [];
     for (const p of this.pieces) {
       const def = PIECES[p.type];
       const n = SAMPLES[p.type];
+      const rollFn = def.roll || (() => 0);
       const start = pts.length;
       for (let i = 0; i < n; i++) {
         const [lx, ly, lz] = def.point(i / n);
         const [wx, wz] = rot(lx, lz, p.dir);
         pts.push(new THREE.Vector3(p.gx * CELL + wx, p.level * STEP + ly, p.gz * CELL + wz));
+        rolls.push(rollFn(i / n));
       }
       if (def.chain) chainIdx.push([start, pts.length - 1]);
     }
@@ -167,14 +179,14 @@ export class Track {
     }
     cum[segCount] = L;
     this.chainDist = chainIdx.map(([a, b]) => [cum[a], cum[Math.min(b + 1, segCount)]]);
-    this.path = { pts, closed, segLen, cum, total: L };
+    this.path = { pts, rolls, closed, segLen, cum, total: L };
     this._cursor = 0;
   }
 
-  posAt(d, out = new THREE.Vector3(), tangent = null) {
+  posAt(d, out = new THREE.Vector3(), tangent = null, rollObj = null) {
     const P = this.path, N = P.pts.length;
-    if (N === 0) { out.set(0, 0, 0); if (tangent) tangent.set(1, 0, 0); return out; }
-    if (N === 1) { out.copy(P.pts[0]); if (tangent) tangent.set(1, 0, 0); return out; }
+    if (N === 0) { out.set(0, 0, 0); if (tangent) tangent.set(1, 0, 0); if (rollObj) rollObj.value = 0; return out; }
+    if (N === 1) { out.copy(P.pts[0]); if (tangent) tangent.set(1, 0, 0); if (rollObj) rollObj.value = 0; return out; }
     if (P.closed) d = ((d % P.total) + P.total) % P.total;
     else d = Math.max(0, Math.min(P.total - 1e-4, d));
     let i = this._cursor;
@@ -188,7 +200,13 @@ export class Track {
     const t = Math.max(0, Math.min(1, (d - P.cum[i]) / l));
     out.lerpVectors(a, b, t);
     if (tangent) tangent.subVectors(b, a).normalize();
+    if (rollObj) rollObj.value = P.rolls[i] + wrapAngle(P.rolls[(i + 1) % N] - P.rolls[i]) * t;
     return out;
+  }
+
+  rollAt(d) {
+    this.posAt(d, _tmpA, null, _ro);
+    return _ro.value;
   }
 
   slopeAt(d) {
