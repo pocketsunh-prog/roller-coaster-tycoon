@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coaster Tycoon 3D</title>
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./node_modules/three/build/three.module.js",
+        "three/addons/": "./node_modules/three/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- Top HUD -->
+  <div id="hud">
+    <div class="stat"><span class="stat-label">Cash</span><span class="stat-value cash" id="cash">$5,000</span></div>
+    <div class="stat"><span class="stat-label">Guests</span><span class="stat-value" id="guests">0</span></div>
+    <div class="stat"><span class="stat-label">Status</span><span class="stat-value status-building" id="status">BUILDING</span></div>
+    <div class="stat"><span class="stat-label">Excitement</span><span class="stat-value" id="excitement">5</span></div>
+    <div class="stat"><span class="stat-label">Speed</span><span class="stat-value" id="speed">0.0</span></div>
+    <div class="stat">
+      <span class="stat-label">Ticket</span>
+      <span class="stat-value price-group">
+        <button id="priceMinus" class="price-btn">-</button>
+        <span id="price">$5</span>
+        <button id="pricePlus" class="price-btn">+</button>
+      </span>
+    </div>
+    <button id="helpBtn" title="Help">?</button>
+  </div>
+
+  <!-- Help panel -->
+  <div id="help" class="hidden">
+    <h2>How to play</h2>
+    <ol>
+      <li>Build track pieces from the end of the station (ghost preview).</li>
+      <li>Loop the track back to the station entrance to complete the circuit.</li>
+      <li>Press <b>Open Ride</b> — guests will pay to ride!</li>
+    </ol>
+    <ul>
+      <li><b>1-5</b> place piece &nbsp; <b>Q/E</b> cycle piece &nbsp; <b>Enter</b> place selected</li>
+      <li><b>U</b> undo &nbsp; <b>C</b> clear &nbsp; <b>O</b> open/close ride &nbsp; <b>-/+</b> ticket price</li>
+      <li><b>Z</b> zoom in &nbsp; <b>X</b> zoom out &nbsp; <b>V</b> save &nbsp; <b>L</b> load</li>
+      <li><b>Mouse</b> drag = rotate, wheel = zoom, right-drag = pan, click ghost = build</li>
+      <li>Up slopes have chain lifts. Higher ticket price = fewer guests willing to pay.</li>
+    </ul>
+  </div>
+
+  <!-- Build toolbar -->
+  <div id="toolbar">
+    <div class="tool-group">
+      <button class="tool selected" data-piece="straight"><span class="tool-icon">&#9644;&#9644;</span><span class="tool-name">Straight</span><span class="tool-cost">$40</span><span class="tool-key">1</span></button>
+      <button class="tool" data-piece="left"><span class="tool-icon">&#8631;</span><span class="tool-name">Left</span><span class="tool-cost">$60</span><span class="tool-key">2</span></button>
+      <button class="tool" data-piece="right"><span class="tool-icon">&#8630;</span><span class="tool-name">Right</span><span class="tool-cost">$60</span><span class="tool-key">3</span></button>
+      <button class="tool" data-piece="up"><span class="tool-icon">&#8599;</span><span class="tool-name">Up (chain)</span><span class="tool-cost">$70</span><span class="tool-key">4</span></button>
+      <button class="tool" data-piece="down"><span class="tool-icon">&#8600;</span><span class="tool-name">Down</span><span class="tool-cost">$70</span><span class="tool-key">5</span></button>
+    </div>
+    <div class="tool-group">
+      <button id="undoBtn" class="tool action"><span class="tool-name">Undo</span><span class="tool-key">U</span></button>
+      <button id="clearBtn" class="tool action danger"><span class="tool-name">Clear</span><span class="tool-key">C</span></button>
+      <button id="zoomInBtn" class="tool action"><span class="tool-name">Zoom +</span><span class="tool-key">Z</span></button>
+      <button id="zoomOutBtn" class="tool action"><span class="tool-name">Zoom -</span><span class="tool-key">X</span></button>
+      <button id="saveBtn" class="tool action"><span class="tool-name">Save</span><span class="tool-key">V</span></button>
+      <button id="loadBtn" class="tool action"><span class="tool-name">Load</span><span class="tool-key">L</span></button>
+      <button id="openBtn" class="tool action" disabled>Open Ride</button>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
