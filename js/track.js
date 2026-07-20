@@ -120,6 +120,58 @@ export class Track {
     return p;
   }
 
+  // --- Editing ------------------------------------------------------------
+
+  canPlaceAfter(index) {
+    if (index < 1 || index >= this.pieces.length) return false;
+    if (!this.complete) return index === this.pieces.length - 1;
+    return false;
+  }
+
+  // Replace a piece's type in place. Only allowed when the new type has the
+  // same exit signature (offset + dir + level) so the rest of the track stays
+  // connected. Returns { ok, costDiff } or { ok: false, reason }.
+  replacePiece(index, type) {
+    if (index < 1 || index >= this.pieces.length) return { ok: false, reason: 'Invalid piece' };
+    const oldType = this.pieces[index].type;
+    if (oldType === type) return { ok: false, reason: 'Same type' };
+    const oldDef = PIECES[oldType];
+    const newDef = PIECES[type];
+    if (!newDef) return { ok: false, reason: 'Unknown piece' };
+    if (
+      newDef.exitOffset[0] !== oldDef.exitOffset[0] ||
+      newDef.exitOffset[1] !== oldDef.exitOffset[1] ||
+      newDef.exitDirDelta !== oldDef.exitDirDelta ||
+      newDef.exitLevelDelta !== oldDef.exitLevelDelta
+    ) {
+      return { ok: false, reason: 'Changed shape — disconnects track' };
+    }
+    this.pieces[index] = { ...this.pieces[index], type };
+    this.rebuildPath();
+    return { ok: true, costDiff: newDef.cost - oldDef.cost };
+  }
+
+  // Delete a piece and everything after it (truncate the track here).
+  // Returns the total cost of removed pieces (for a refund).
+  deletePiece(index) {
+    if (index < 1 || index >= this.pieces.length) return 0;
+    const removed = this.pieces.splice(index);
+    for (const p of removed) this.occupied.delete(p.gx + ',' + p.gz);
+    this.end = this.pieceExit(this.pieces[this.pieces.length - 1]);
+    this.complete = false;
+    this.rebuildPath();
+    return removed.reduce((s, p) => s + PIECES[p.type].cost, 0);
+  }
+
+  // Bounds-check a replacement type against level limits (for UI hints).
+  pieceLevelBounds(index) {
+    const p = this.pieces[index];
+    const lvl = p ? p.level : 0;
+    const min = -lvl;            // cannot go below 0
+    const max = MAX_LEVEL - lvl; // cannot exceed MAX_LEVEL
+    return { min, max };
+  }
+
   clear() {
     const refund = this.pieces.slice(1).reduce((s, p) => s + PIECES[p.type].cost, 0);
     this.reset();
@@ -154,11 +206,13 @@ export class Track {
     const pts = [];
     const rolls = [];
     const chainIdx = [];
+    const pieceStart = []; // first sample index for each piece
     for (const p of this.pieces) {
       const def = PIECES[p.type];
       const n = SAMPLES[p.type];
       const rollFn = def.roll || (() => 0);
       const start = pts.length;
+      pieceStart.push(start);
       for (let i = 0; i < n; i++) {
         const [lx, ly, lz] = def.point(i / n);
         const [wx, wz] = rot(lx, lz, p.dir);
@@ -179,7 +233,13 @@ export class Track {
     }
     cum[segCount] = L;
     this.chainDist = chainIdx.map(([a, b]) => [cum[a], cum[Math.min(b + 1, segCount)]]);
-    this.path = { pts, rolls, closed, segLen, cum, total: L };
+    // Map each sample point to its piece index (for click selection)
+    const pointPiece = new Int32Array(N);
+    for (let pi = 0; pi < this.pieces.length; pi++) {
+      const end = pi + 1 < pieceStart.length ? pieceStart[pi + 1] : N;
+      for (let s = pieceStart[pi]; s < end; s++) pointPiece[s] = pi;
+    }
+    this.path = { pts, rolls, closed, segLen, cum, total: L, pointPiece, pieceStart };
     this._cursor = 0;
   }
 

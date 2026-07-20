@@ -24,10 +24,14 @@ Then open `http://localhost:3000` in your browser.
 | Action | Input |
 |--------|-------|
 | Place track | Left click |
+| Select a piece | Left click on existing track |
+| Replace selected piece | 1-6 (must keep same shape) |
+| Delete selected piece | Delete / Backspace |
+| Deselect | Escape |
 | Rotate camera | Right-click drag |
 | Pan camera | Middle-click drag |
 | Zoom | Scroll wheel |
-| Undo last piece | Right click on piece / U key |
+| Undo last piece | U key |
 | Save | V key |
 | Load | L key |
 

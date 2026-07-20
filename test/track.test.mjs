@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { Track } from '../js/track.js';
 import { Train } from '../js/train.js';
-import { CELL, COASTER_MODELS, CAR_COUNT } from '../js/config.js';
+import { CELL, COASTER_MODELS, CAR_COUNT, COSTS } from '../js/config.js';
 
 let failures = 0;
 function assert(cond, msg) {
@@ -128,6 +128,29 @@ function lapMaxSpeed(modelId) {
   while (s < 300 && !done) { t.update(dt); s += dt; }
   return { done, max: t.maxSpeed };
 }
+// --- 4c. Piece editing (select / replace / delete) ------------------------
+console.log('Piece editing:');
+const editTrack = buildLoop(FLAT_LOOP, 'edit');
+// Straight and roll share the same exit signature -> can swap in place
+const straightIdx = editTrack.pieces.findIndex(p => p.type === 'straight' && editTrack.pieces.indexOf(p) > 0);
+assert(straightIdx > 0, 'found a straight piece to edit');
+const repl = editTrack.replacePiece(straightIdx, 'roll');
+assert(repl.ok === true && repl.costDiff === COSTS.roll - COSTS.straight, 'replace straight with roll (same exit shape)');
+assert(editTrack.replacePiece(straightIdx, 'left').ok === false, 'cannot replace with a shape that disconnects the track');
+// Invalid: changing station (index 0) is rejected
+assert(editTrack.replacePiece(0, 'straight').ok === false, 'cannot edit the station piece');
+// pointPiece maps segments back to pieces
+assert(editTrack.path.pointPiece[editTrack.path.pieceStart[straightIdx]] === straightIdx, 'pointPiece maps sample to its piece');
+// Delete a piece and everything after it
+const before = editTrack.pieces.length;
+const delIdx = Math.max(1, before - 3);
+const refund = editTrack.deletePiece(delIdx);
+assert(refund > 0, 'deleting pieces grants a refund');
+assert(editTrack.pieces.length === delIdx, 'piece count truncated to delete index');
+assert(editTrack.complete === false, 'truncated track is no longer complete');
+// Cannot delete the station
+assert(editTrack.deletePiece(0) === 0, 'cannot delete the station piece');
+
 const hyper = lapMaxSpeed('hyper');
 const wooden = lapMaxSpeed('wooden');
 assert(hyper.done, 'hyper completed hilly lap');

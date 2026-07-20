@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Track, PIECES } from './track.js';
-import { buildTrackGroup, buildStationMesh, buildGhostMesh } from './trackmesh.js';
+import { buildTrackGroup, buildStationMesh, buildGhostMesh, buildSelectionMesh } from './trackmesh.js';
 import { Train } from './train.js';
 import { GuestSystem } from './guests.js';
 import { buildScenery } from './scenery.js';
@@ -42,6 +42,8 @@ class Game {
     this.selected = 'straight';
     this.model = DEFAULT_MODEL;
     this.rides = 0;
+    this.selectedPiece = -1;     // index of the piece being edited (-1 = none)
+    this.selectionMesh = null;
     this._boardTimer = 0;
     this._departTimer = 0;
 
@@ -54,6 +56,7 @@ class Game {
     this.trackGroup = null;
     this.ghost = null;
     this.rebuildTrackMesh();
+    this.updateSelectionMesh();
 
     this.train = new Train(this.scene, COASTER_MODELS[this.model]);
     this.train.reset(this.track);
@@ -119,8 +122,10 @@ class Game {
     if (this.rideOpen) this.closeRide();
     if (this.train.riders > 0) this.guests.alight(this.train.riders);
     this.train.reset(this.track);
+    this.selectedPiece = -1;
     this.rebuildTrackMesh();
     this.updateGhost();
+    this.updateSelectionMesh();
     this.save(true); // autosave
   }
 
@@ -133,6 +138,7 @@ class Game {
       });
     }
     this.trackGroup = buildTrackGroup(this.track, COASTER_MODELS[this.model]);
+    this._railsMesh = this.trackGroup.children.find(o => o.userData.isRails) || null;
     this.scene.add(this.trackGroup);
   }
 
@@ -170,6 +176,72 @@ class Game {
     const valid = this.track.canPlace(this.selected).ok;
     this.ghost = buildGhostMesh(this.track.ghostPoints(this.selected), valid);
     this.scene.add(this.ghost);
+  }
+
+  // --- Piece selection / editing -----------------------------------------
+
+  selectPiece(index) {
+    if (index < 0 || index >= this.track.pieces.length) { this.clearSelection(); return; }
+    this.selectedPiece = index;
+    this.updateSelectionMesh();
+    const p = this.track.pieces[index];
+    this.ui.toast('Selected ' + p.type + ' (#' + index + ') — press 1-6 to change, Del to remove');
+  }
+
+  clearSelection() {
+    this.selectedPiece = -1;
+    this.updateSelectionMesh();
+  }
+
+  updateSelectionMesh() {
+    if (this.selectionMesh) {
+      this.scene.remove(this.selectionMesh);
+      this.selectionMesh.traverse(o => {
+        if (o.geometry) o.geometry.dispose();
+        if (o.material) o.material.dispose();
+      });
+      this.selectionMesh = null;
+    }
+    if (this.selectedPiece >= 0 && this.track.pieces.length > 1) {
+      this.selectionMesh = buildSelectionMesh(this.track, this.selectedPiece);
+      this.scene.add(this.selectionMesh);
+    }
+  }
+
+  replaceSelectedPiece(type) {
+    if (this.selectedPiece < 0) { this.ui.toast('Click a piece to select it first'); sfx.error(); return; }
+    const target = this.track.pieces[this.selectedPiece];
+    if (target.type === type) return;
+    const newDef = PIECES[type];
+    const oldDef = PIECES[target.type];
+    // Must keep the same exit signature or the rest of the track disconnects
+    if (
+      newDef.exitOffset[0] !== oldDef.exitOffset[0] ||
+      newDef.exitOffset[1] !== oldDef.exitOffset[1] ||
+      newDef.exitDirDelta !== oldDef.exitDirDelta ||
+      newDef.exitLevelDelta !== oldDef.exitLevelDelta
+    ) {
+      this.ui.toast('That shape would disconnect the track'); sfx.error();
+      return;
+    }
+    const costDiff = newDef.cost - oldDef.cost;
+    if (costDiff > 0 && this.cash < costDiff) { this.ui.toast('Not enough cash!'); sfx.error(); return; }
+    this.track.replacePiece(this.selectedPiece, type);
+    this.cash -= costDiff;
+    if (costDiff !== 0) sfx.cash();
+    this.onTrackEdited();
+    this.selectPiece(this.selectedPiece);
+    this.ui.toast('Changed to ' + type);
+  }
+
+  deleteSelectedPiece() {
+    if (this.selectedPiece < 0) { this.ui.toast('Click a piece to select it first'); sfx.error(); return; }
+    const refund = this.track.deletePiece(this.selectedPiece);
+    this.cash += refund;
+    sfx.undo();
+    this.onTrackEdited();
+    this.ui.toast('Removed — $' + refund + ' refunded');
+    this.clearSelection();
   }
 
   // --- Ride operation -----------------------------------------------------
@@ -282,8 +354,18 @@ class Game {
 
   onKey(e) {
     if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'Escape') { this.clearSelection(); return; }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && this.selectedPiece >= 0) {
+      e.preventDefault();
+      this.deleteSelectedPiece();
+      return;
+    }
     const i = ['1', '2', '3', '4', '5', '6'].indexOf(e.key);
-    if (i >= 0) { this.tryPlace(PIECE_ORDER[i]); return; }
+    if (i >= 0) {
+      if (this.selectedPiece >= 0) this.replaceSelectedPiece(PIECE_ORDER[i]);
+      else this.tryPlace(PIECE_ORDER[i]);
+      return;
+    }
     switch (e.key.toLowerCase()) {
       case 'q': this.cycleSelection(-1); break;
       case 'e': this.cycleSelection(1); break;
@@ -310,15 +392,28 @@ class Game {
     if (!this._pointerDown) return;
     const moved = Math.hypot(e.clientX - this._pointerDown[0], e.clientY - this._pointerDown[1]);
     this._pointerDown = null;
-    if (moved > 5 || !this.ghost) return; // it was a camera drag
+    if (moved > 5) return; // it was a camera drag
     const ndc = new THREE.Vector2(
       (e.clientX / window.innerWidth) * 2 - 1,
       -(e.clientY / window.innerHeight) * 2 + 1
     );
     this._raycaster.setFromCamera(ndc, this.camera);
-    if (this._raycaster.intersectObject(this.ghost).length > 0) {
+    // 1) ghost placement
+    if (this.ghost && this._raycaster.intersectObject(this.ghost).length > 0) {
       this.tryPlace(this.selected);
+      return;
     }
+    // 2) click a track piece to select it (only the rails carry segment ids)
+    if (this._railsMesh) {
+      const hits = this._raycaster.intersectObject(this._railsMesh);
+      if (hits.length > 0) {
+        const seg = Math.floor(hits[0].instanceId / 2);
+        const pp = this.track.path.pointPiece;
+        if (pp && seg >= 0 && seg < pp.length) { this.selectPiece(pp[seg]); return; }
+      }
+    }
+    // 3) clicked empty space — deselect
+    this.clearSelection();
   }
 
   onResize() {

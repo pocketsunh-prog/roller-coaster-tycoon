@@ -79,7 +79,9 @@ export function buildTrackGroup(track, model = COASTER_MODELS[DEFAULT_MODEL]) {
       rails.setMatrixAt(idx++, _dummy.matrix);
     }
   }
+  rails.instanceId; // ensure instanceId is available for raycasting
   rails.castShadow = true;
+  rails.userData.isRails = true;
   group.add(rails);
 
   // Ties
@@ -152,6 +154,50 @@ export function buildStationMesh(model = COASTER_MODELS[DEFAULT_MODEL]) {
   roof.castShadow = true;
   g.add(roof);
   return g;
+}
+
+// Bright highlight overlay for the selected piece (instanced segments)
+export function buildSelectionMesh(track, pieceIndex) {
+  const group = new THREE.Group();
+  const P = track.path, pts = P.pts, N = pts.length;
+  const rolls = P.rolls;
+  const pieceStart = P.pieceStart;
+  if (pieceIndex < 0 || pieceIndex >= pieceStart.length) return group;
+  const start = pieceStart[pieceIndex];
+  const end = pieceIndex + 1 < pieceStart.length ? pieceStart[pieceIndex + 1] : N;
+  const count = end - start;
+  if (count < 1) return group;
+  const geo = new THREE.BoxGeometry(0.28, 0.28, 1.05);
+  const mat = new THREE.MeshBasicMaterial({ color: 0x35e08c, transparent: true, opacity: 0.6, depthWrite: false });
+  const mesh = new THREE.InstancedMesh(geo, mat, count);
+  const _s = new THREE.Vector3(), _u = new THREE.Vector3(), _t = new THREE.Vector3(), _q = new THREE.Quaternion(), _m = new THREE.Matrix4(), _up = new THREE.Vector3(0, 1, 0), _side = new THREE.Vector3(), _upv = new THREE.Vector3(), _sideB = new THREE.Vector3(), _upB = new THREE.Vector3();
+  let idx = 0;
+  for (let i = start; i < end; i++) {
+    const a = pts[i], b = pts[(i + 1) % N];
+    _t.subVectors(b, a);
+    const l = _t.length();
+    _t.normalize();
+    const cross = (t, axis, o) => o.crossVectors(axis, t).normalize();
+    _side.crossVectors(_up, _t).normalize();
+    _upv.crossVectors(_t, _side).normalize();
+    const ra = rolls[i] || 0;
+    if (ra) { _q.setFromAxisAngle(_t, ra); _side.applyQuaternion(_q); _upv.applyQuaternion(_q); }
+    _sideB.crossVectors(_up, _t).normalize();
+    _upB.crossVectors(_t, _sideB).normalize();
+    const rb = rolls[(i + 1) % N] || 0;
+    if (rb) { _q.setFromAxisAngle(_t, rb); _sideB.applyQuaternion(_q); _upB.applyQuaternion(_q); }
+    _upv.add(_upB).normalize();
+    _side.crossVectors(_upv, _t).normalize();
+    _upv.crossVectors(_t, _side).normalize();
+    _m.makeBasis(_side, _upv, _t);
+    _q.setFromRotationMatrix(_m);
+    _s.lerpVectors(a, b, 0.5).addScaledVector(_upv, 0.16);
+    _m.compose(_s, _q, new THREE.Vector3(1, 1, Math.max(0.01, l)));
+    mesh.setMatrixAt(idx++, _m);
+  }
+  mesh.count = idx;
+  group.add(mesh);
+  return group;
 }
 
 // Semi-transparent preview ribbon for the piece about to be placed

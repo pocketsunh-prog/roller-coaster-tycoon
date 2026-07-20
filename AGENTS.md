@@ -46,6 +46,7 @@ Coaster Tycoon 3D is a browser-based 3D roller-coaster tycoon game built with Th
 
 ## Gameplay Summary
 - Build track pieces (straight, left, right, up/chain, down, roll) on a grid
+- Click any piece to select it (highlighted green); press 1-6 to replace its type (only if the exit signature matches), Delete to truncate from there, Esc to deselect
 - Roll pieces carry a per-point roll angle in `path.rolls`; meshes and cars use rolled basis frames
 - Choose a coaster model (Steel / Wooden / Hyper) — different visuals, friction, and top speed; saved with the game
 - Complete a circuit back to the station to open the ride
