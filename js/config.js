@@ -2,7 +2,7 @@
 export const CELL = 6;          // grid cell size (world units)
 export const STEP = 3;          // height change per slope piece
 export const GRID_RADIUS = 18;  // buildable cells: -18..18
-export const MAX_LEVEL = 12;
+export const MAX_LEVEL = 30;
 
 export const COSTS = { straight: 40, left: 60, right: 60, up: 70, down: 70, roll: 120 };
 export const START_CASH = 500000;

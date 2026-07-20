@@ -12,7 +12,6 @@ import { AuthUI } from './auth-ui.js';
 import { START_CASH, COASTER_MODELS, DEFAULT_MODEL } from './config.js';
 
 const PIECE_ORDER = ['straight', 'left', 'right', 'up', 'down', 'roll'];
-const SAVE_KEY = 'coasterTycoonSave';
 
 class Game {
   constructor() {
@@ -45,6 +44,7 @@ class Game {
     this.model = DEFAULT_MODEL;
     this.rides = 0;
     this.selectedPiece = -1;     // index of the piece being edited (-1 = none)
+    this.currentSlot = 'default';
     this.selectionMesh = null;
     this._boardTimer = 0;
     this._departTimer = 0;
@@ -68,6 +68,7 @@ class Game {
 
     this.guests = new GuestSystem(this.scene, this);
     this.ui = new UI(this);
+    this.ui.initSlots();
     this.authUI = new AuthUI(this);
 
     // Input
@@ -80,14 +81,16 @@ class Game {
 
     this.loggedIn = !!auth.getToken();
 
-    // Restore previous session if present
-    if (this.hasSave()) this.load();
-
     this.clock = new THREE.Clock();
     this.updateGhost();
     this.loop();
 
-    if (!this.loggedIn) this.showLoginGate();
+    if (this.loggedIn) {
+      this.refreshSlotList();
+    } else {
+      if (this.hasSave()) this.load();
+      this.showLoginGate();
+    }
   }
 
   showLoginGate() {
@@ -390,61 +393,94 @@ class Game {
     return true;
   }
 
+  get slotKey() { return `coasterSave:${this.currentSlot}`; }
+
+  newSlot(name) {
+    this.currentSlot = name;
+    this.track.reset();
+    this.cash = START_CASH;
+    this.price = 5;
+    this.rides = 0;
+    this.rideOpen = false;
+    this.model = DEFAULT_MODEL;
+    this.selectedPiece = -1;
+    this.train.rebuild(COASTER_MODELS[this.model]);
+    this.train.reset(this.track);
+    this.rebuildTrackMesh();
+    this.rebuildStation();
+    this.updateGhost();
+    this.ui.toast('New save: ' + name);
+    this.save(true);
+  }
+
+  async listSlots() {
+    if (!auth.getToken()) return [];
+    try { return await auth.listSaves(); } catch { return []; }
+  }
+
   save(silent = false) {
     const data = this.collectSaveData();
-    try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-    } catch { /* storage full — fall through to cloud */ }
+    try { localStorage.setItem(this.slotKey, JSON.stringify(data)); } catch { /* fallback to cloud */ }
     if (auth.getToken()) {
-      auth.saveGame('default', data)
-        .then(() => { if (!silent) { this.ui.toast('Saved to cloud!'); sfx.cash(); } })
+      auth.saveGame(this.currentSlot, data)
+        .then(() => { if (!silent) { this.ui.toast('Saved: ' + this.currentSlot); sfx.cash(); } })
         .catch(() => { if (!silent) { this.ui.toast('Cloud save failed'); sfx.error(); } });
       return;
     }
-    if (!silent) { this.ui.toast('Game saved!'); sfx.cash(); }
+    if (!silent) { this.ui.toast('Saved: ' + this.currentSlot); sfx.cash(); }
   }
 
-  load() {
-    if (auth.getToken()) {
-      this.loadCloud();
-      return;
-    }
+  load(slotName) {
+    this.currentSlot = slotName || this.currentSlot;
+    if (auth.getToken()) { this.loadCloud(); return; }
     this.loadLocal();
   }
 
   loadLocal() {
     let data;
-    try {
-      data = JSON.parse(localStorage.getItem(SAVE_KEY));
-    } catch {
-      data = null;
-    }
-    if (!data || !data.pieces) { this.ui.toast('No save found'); sfx.error(); return; }
-    if (this.applySaveData(data)) {
-      this.ui.toast('Game loaded!');
-    }
+    try { data = JSON.parse(localStorage.getItem(this.slotKey)); } catch { data = null; }
+    if (!data || !data.pieces) { this.ui.toast('No save found: ' + this.currentSlot); sfx.error(); return; }
+    if (this.applySaveData(data)) this.ui.toast('Loaded: ' + this.currentSlot);
   }
 
   async loadCloud() {
     try {
-      const { game_data } = await auth.loadGame('default');
-      if (this.applySaveData(game_data)) {
-        this.ui.toast('Loaded from cloud!');
-      }
+      const { game_data } = await auth.loadGame(this.currentSlot);
+      if (this.applySaveData(game_data)) this.ui.toast('Loaded: ' + this.currentSlot);
     } catch {
       this.loadLocal();
     }
   }
 
+  async deleteSlot(name) {
+    try {
+      if (auth.getToken()) await auth.deleteSave(name);
+      localStorage.removeItem(`coasterSave:${name}`);
+      this.ui.toast('Deleted: ' + name);
+    } catch { this.ui.toast('Delete failed'); sfx.error(); }
+  }
+
+  async refreshSlotList() {
+    if (auth.getToken()) {
+      try {
+        const slots = await this.listSlots();
+        if (slots.length && !localStorage.getItem(this.slotKey)) {
+          const latest = slots.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))[0];
+          this.currentSlot = latest.save_name;
+          await this.loadCloud();
+        }
+      } catch { /* use local */ }
+    }
+  }
+
   hasSave() {
-    try { return !!localStorage.getItem(SAVE_KEY) || !!auth.getToken(); } catch { return false; }
+    try { return !!localStorage.getItem(this.slotKey) || !!auth.getToken(); } catch { return false; }
   }
 
   onAuthChange() {
     this.loggedIn = true;
     this.hideLoginGate();
-    const data = this.collectSaveData();
-    auth.saveGame('default', data).catch(() => {});
+    this.ui.refreshSlots();
   }
 
   // --- Login gate ----------------------------------------------------------

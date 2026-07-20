@@ -96,4 +96,51 @@ export class UI {
       btn.classList.toggle('selected', btn.dataset.model === g.model);
     });
   }
+
+  initSlots() {
+    this.slotSelect = this.$('slotSelect');
+    this.slotSelect.addEventListener('change', () => {
+      const name = this.slotSelect.value;
+      if (name && name !== this.game.currentSlot) {
+        this.game.load(name);
+      }
+    });
+    this.$('slotNewBtn').addEventListener('click', () => this.promptNewSlot());
+    this.$('slotDeleteBtn').addEventListener('click', () => this.deleteCurrentSlot());
+  }
+
+  async promptNewSlot() {
+    const name = prompt('Save name:');
+    if (!name) return;
+    const trimmed = name.trim().slice(0, 64);
+    if (!trimmed) return;
+    this.game.newSlot(trimmed);
+    await this.refreshSlots();
+  }
+
+  async deleteCurrentSlot() {
+    if (this.game.currentSlot === 'default') { this.toast('Cannot delete default'); return; }
+    const ok = confirm(`Delete save "${this.game.currentSlot}"?`);
+    if (!ok) return;
+    await this.game.deleteSlot(this.game.currentSlot);
+    this.game.currentSlot = 'default';
+    this.game.load('default');
+    await this.refreshSlots();
+  }
+
+  async refreshSlots() {
+    if (!this.slotSelect) return;
+    const slots = await this.game.listSlots();
+    const names = slots.length ? slots.map(s => s.save_name) : ['default'];
+    if (!names.includes(this.game.currentSlot)) names.push(this.game.currentSlot);
+    this.slotSelect.innerHTML = '';
+    for (const n of names) {
+      const opt = document.createElement('option');
+      opt.value = n;
+      opt.textContent = n;
+      if (n === this.game.currentSlot) opt.selected = true;
+      this.slotSelect.appendChild(opt);
+    }
+    if (this.game.loggedIn) this.game.save(true);
+  }
 }
