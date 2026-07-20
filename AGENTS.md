@@ -6,8 +6,23 @@ Coaster Tycoon 3D is a browser-based 3D roller-coaster tycoon game built with Th
 
 ## Commands
 
-- `npm start` — Start the static file server (default port from `server.js`)
-- `npm test` — Currently not configured; headless logic tests live in `test/track.test.mjs` and can be run with `node test/track.test.mjs`
+- `npm start` — Start the Express server (default port 8080)
+- `npm test` — Headless logic tests in `test/track.test.mjs`; run with `node test/track.test.mjs`
+- `docker compose up -d` — Start MySQL + app containers
+
+## Database (MySQL in Docker)
+
+- `docker compose up -d db` — Start just the MySQL container
+- Schema auto-loaded from `db/schema.sql` on first boot
+- Tables: `users` (id, username, password_hash), `saves` (id, user_id, save_name, game_data JSON)
+- Connection via `server/db.js` pool (env: DB_HOST, DB_USER, DB_PASSWORD, DB_NAME)
+
+## Auth
+
+- JWT-based: `server/auth.js` signs/verifies tokens, `authMiddleware` protects routes
+- Endpoints: `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`
+- Save endpoints (auth required): `GET /api/saves`, `GET /api/saves/:name`, `POST /api/saves/:name`, `DELETE /api/saves/:name`
+- Frontend: `js/auth.js` (API client + token storage), `js/auth-ui.js` (login/register modal)
 
 ## Architecture
 

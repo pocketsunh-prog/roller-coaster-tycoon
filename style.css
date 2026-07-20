@@ -176,3 +176,24 @@ html, body {
 .modal-btn:hover { background: #4c607f; }
 .modal-btn.danger { background: #c0392b; }
 .modal-btn.danger:hover { background: #d9443a; }
+
+/* ---------- Auth ---------- */
+#authBtn { min-width: 60px; }
+.auth-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+.auth-tab {
+  flex: 1; padding: 8px;
+  border: none; border-radius: 8px;
+  background: #2b3a52; color: #aab; cursor: pointer;
+  font-weight: bold; font-size: 13px; font-family: inherit;
+}
+.auth-tab.active { background: #3f7fd9; color: #fff; }
+.auth-input {
+  width: 100%; box-sizing: border-box;
+  padding: 10px 12px; margin-bottom: 10px;
+  border: 2px solid rgba(255,255,255,0.15); border-radius: 8px;
+  background: #1a2230; color: #e8eef7;
+  font-size: 14px; font-family: inherit;
+}
+.auth-input:focus { outline: none; border-color: #3f7fd9; }
+.auth-error { color: #ff8a8a; font-size: 12px; min-height: 16px; margin: 0 0 8px; }
+.auth-welcome { text-align: center; color: #7bf1a8; font-size: 14px; margin-bottom: 14px; }

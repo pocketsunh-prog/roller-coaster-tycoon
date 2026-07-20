@@ -1,0 +1,42 @@
+version: "3.8"
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: coaster_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: coaster
+      MYSQL_USER: coaster
+      MYSQL_PASSWORD: coasterpass
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ucoaster", "-pcoasterpass"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    container_name: coaster_app
+    restart: unless-stopped
+    environment:
+      DB_HOST: db
+      DB_USER: coaster
+      DB_PASSWORD: coasterpass
+      DB_NAME: coaster
+      JWT_SECRET: change_this_to_a_random_secret_in_production
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db_data:

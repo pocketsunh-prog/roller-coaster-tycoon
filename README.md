@@ -11,6 +11,14 @@ npm start
 
 Then open `http://localhost:3000` in your browser.
 
+## Docker (MySQL + App)
+
+```bash
+docker compose up -d
+```
+
+Starts MySQL (auto-loads `db/schema.sql`) and the app on port 8080.
+
 ## How to Play
 
 1. **Build** — Select a track piece from the toolbar and click on the grid to place it. Pieces must connect back to the station to form a complete circuit.

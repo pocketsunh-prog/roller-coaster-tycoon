@@ -7,6 +7,8 @@ import { GuestSystem } from './guests.js';
 import { buildScenery } from './scenery.js';
 import { UI } from './ui.js';
 import { sfx } from './audio.js';
+import { auth } from './auth.js';
+import { AuthUI } from './auth-ui.js';
 import { START_CASH, COASTER_MODELS, DEFAULT_MODEL } from './config.js';
 
 const PIECE_ORDER = ['straight', 'left', 'right', 'up', 'down', 'roll'];
@@ -66,6 +68,7 @@ class Game {
 
     this.guests = new GuestSystem(this.scene, this);
     this.ui = new UI(this);
+    this.authUI = new AuthUI(this);
 
     // Input
     window.addEventListener('resize', () => this.onResize());
@@ -75,17 +78,30 @@ class Game {
     this.renderer.domElement.addEventListener('pointerdown', e => { this._pointerDown = [e.clientX, e.clientY]; });
     this.renderer.domElement.addEventListener('pointerup', e => this.onPointerUp(e));
 
+    this.loggedIn = !!auth.getToken();
+
     // Restore previous session if present
     if (this.hasSave()) this.load();
 
     this.clock = new THREE.Clock();
     this.updateGhost();
     this.loop();
+
+    if (!this.loggedIn) this.showLoginGate();
+  }
+
+  showLoginGate() {
+    this.authUI.open(true);
+  }
+
+  hideLoginGate() {
+    this.authUI.modal.classList.add('hidden');
   }
 
   // --- Building -----------------------------------------------------------
 
   tryPlace(type) {
+    if (!this.loggedIn) { this.showLoginGate(); return; }
     const chk = this.track.canPlace(type);
     if (!chk.ok) { this.ui.toast('Cannot build here: ' + chk.reason); sfx.error(); return; }
     const cost = PIECES[type].cost;
@@ -324,8 +340,8 @@ class Game {
 
   // --- Save / Load --------------------------------------------------------
 
-  save(silent = false) {
-    const data = {
+  collectSaveData() {
+    return {
       version: 1,
       pieces: this.track.serialize(),
       cash: this.cash,
@@ -334,22 +350,10 @@ class Game {
       rideOpen: this.rideOpen,
       model: this.model,
     };
-    try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-      if (!silent) { this.ui.toast('Game saved!'); sfx.cash(); }
-    } catch {
-      if (!silent) { this.ui.toast('Save failed'); sfx.error(); }
-    }
   }
 
-  load() {
-    let data;
-    try {
-      data = JSON.parse(localStorage.getItem(SAVE_KEY));
-    } catch {
-      data = null;
-    }
-    if (!data || !data.pieces) { this.ui.toast('No save found'); sfx.error(); return false; }
+  applySaveData(data) {
+    if (!data || !data.pieces) return false;
     if (this.rideOpen) this.closeRide();
     if (!this.track.restore(data.pieces)) {
       this.track.reset();
@@ -366,18 +370,75 @@ class Game {
     this.rebuildStation();
     this.updateGhost();
     if (data.rideOpen && this.track.complete) this.openRide();
-    this.ui.toast('Game loaded!');
     return true;
   }
 
-  hasSave() {
-    try { return !!localStorage.getItem(SAVE_KEY); } catch { return false; }
+  save(silent = false) {
+    const data = this.collectSaveData();
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    } catch { /* storage full — fall through to cloud */ }
+    if (auth.getToken()) {
+      auth.saveGame('default', data)
+        .then(() => { if (!silent) { this.ui.toast('Saved to cloud!'); sfx.cash(); } })
+        .catch(() => { if (!silent) { this.ui.toast('Cloud save failed'); sfx.error(); } });
+      return;
+    }
+    if (!silent) { this.ui.toast('Game saved!'); sfx.cash(); }
   }
+
+  load() {
+    if (auth.getToken()) {
+      this.loadCloud();
+      return;
+    }
+    this.loadLocal();
+  }
+
+  loadLocal() {
+    let data;
+    try {
+      data = JSON.parse(localStorage.getItem(SAVE_KEY));
+    } catch {
+      data = null;
+    }
+    if (!data || !data.pieces) { this.ui.toast('No save found'); sfx.error(); return; }
+    if (this.applySaveData(data)) {
+      this.ui.toast('Game loaded!');
+    }
+  }
+
+  async loadCloud() {
+    try {
+      const { game_data } = await auth.loadGame('default');
+      if (this.applySaveData(game_data)) {
+        this.ui.toast('Loaded from cloud!');
+      }
+    } catch {
+      this.loadLocal();
+    }
+  }
+
+  hasSave() {
+    try { return !!localStorage.getItem(SAVE_KEY) || !!auth.getToken(); } catch { return false; }
+  }
+
+  onAuthChange() {
+    this.loggedIn = true;
+    this.hideLoginGate();
+    const data = this.collectSaveData();
+    auth.saveGame('default', data).catch(() => {});
+  }
+
+  // --- Login gate ----------------------------------------------------------
+
+  get isAuthed() { return this.loggedIn; }
 
   // --- Input ----------------------------------------------------------------
 
   onKey(e) {
     if (e.target.tagName === 'INPUT') return;
+    if (!this.loggedIn) { this.showLoginGate(); return; }
     if (e.key === 'Escape') { this.clearSelection(); return; }
     if ((e.key === 'Delete' || e.key === 'Backspace') && this.selectedPiece >= 0) {
       e.preventDefault();
@@ -414,6 +475,7 @@ class Game {
 
   onPointerUp(e) {
     if (!this._pointerDown) return;
+    if (!this.loggedIn) { this.showLoginGate(); this._pointerDown = null; return; }
     const moved = Math.hypot(e.clientX - this._pointerDown[0], e.clientY - this._pointerDown[1]);
     this._pointerDown = null;
     if (moved > 5) return; // it was a camera drag

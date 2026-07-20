@@ -33,6 +33,7 @@
       </span>
     </div>
     <button id="helpBtn" title="Help">?</button>
+    <button id="authBtn" title="Account">Login</button>
   </div>
 
   <!-- Help panel -->
@@ -82,6 +83,29 @@
   </div>
 
   <div id="toast"></div>
+
+  <div id="authModal" class="hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-box">
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-tab="login">Login</button>
+        <button class="auth-tab" data-tab="register">Register</button>
+      </div>
+      <p id="authError" class="auth-error"></p>
+      <input type="text" id="authUsername" class="auth-input" placeholder="Username" maxlength="32" autocomplete="username" />
+      <input type="password" id="authPassword" class="auth-input" placeholder="Password" autocomplete="current-password" />
+      <div class="modal-btns">
+        <button id="authCancel" class="modal-btn">Cancel</button>
+        <button id="authSubmit" class="modal-btn danger">Login</button>
+      </div>
+      <div id="authLogged" class="hidden">
+        <p class="auth-welcome">Logged in as <span id="authUser"></span></p>
+        <div class="modal-btns">
+          <button id="authLogout" class="modal-btn danger">Logout</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div id="modal" class="hidden">
     <div class="modal-backdrop"></div>
