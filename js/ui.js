@@ -30,6 +30,39 @@ export class UI {
     this.$('priceMinus').addEventListener('click', () => game.setPrice(-1));
     this.$('pricePlus').addEventListener('click', () => game.setPrice(1));
     this.$('helpBtn').addEventListener('click', () => this.$('help').classList.toggle('hidden'));
+
+    // Confirm modal
+    this.modalEl = this.$('modal');
+    this.modalMsg = this.$('modal-msg');
+    this._modalResolve = null;
+    this.$('modal-cancel').addEventListener('click', () => this._closeModal(false));
+    this.$('modal-confirm').addEventListener('click', () => this._closeModal(true));
+    this.modalEl.querySelector('.modal-backdrop').addEventListener('click', () => this._closeModal(false));
+
+    // Action buttons
+    this.$('undoBtn').addEventListener('click', () => game.undo());
+    this.$('clearBtn').addEventListener('click', () => this.confirm('Clear all track pieces?', () => game.clearAll()));
+    this.$('newBtn').addEventListener('click', () => this.confirm('Start a new game? This erases everything.', () => game.newGame()));
+    this.$('zoomInBtn').addEventListener('click', () => game.zoomIn());
+    this.$('zoomOutBtn').addEventListener('click', () => game.zoomOut());
+    this.$('saveBtn').addEventListener('click', () => game.save());
+    this.$('loadBtn').addEventListener('click', () => game.load());
+    this.openBtn.addEventListener('click', () => game.toggleOpen());
+    this.$('priceMinus').addEventListener('click', () => game.setPrice(-1));
+    this.$('pricePlus').addEventListener('click', () => game.setPrice(1));
+    this.$('helpBtn').addEventListener('click', () => this.$('help').classList.toggle('hidden'));
+  }
+
+  confirm(msg, onYes) {
+    this.modalMsg.textContent = msg;
+    this.modalEl.classList.remove('hidden');
+    this._modalOnYes = onYes;
+  }
+
+  _closeModal(confirmed) {
+    this.modalEl.classList.add('hidden');
+    if (confirmed && this._modalOnYes) this._modalOnYes();
+    this._modalOnYes = null;
   }
 
   toast(msg, ms = 2400) {

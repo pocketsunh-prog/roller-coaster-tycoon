@@ -72,6 +72,7 @@
     <div class="tool-group">
       <button id="undoBtn" class="tool action"><span class="tool-name">Undo</span><span class="tool-key">U</span></button>
       <button id="clearBtn" class="tool action danger"><span class="tool-name">Clear</span><span class="tool-key">C</span></button>
+      <button id="newBtn" class="tool action danger"><span class="tool-name">New</span></button>
       <button id="zoomInBtn" class="tool action"><span class="tool-name">Zoom +</span><span class="tool-key">Z</span></button>
       <button id="zoomOutBtn" class="tool action"><span class="tool-name">Zoom -</span><span class="tool-key">X</span></button>
       <button id="saveBtn" class="tool action"><span class="tool-name">Save</span><span class="tool-key">V</span></button>
@@ -81,6 +82,17 @@
   </div>
 
   <div id="toast"></div>
+
+  <div id="modal" class="hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-box">
+      <p id="modal-msg"></p>
+      <div class="modal-btns">
+        <button id="modal-cancel" class="modal-btn">Cancel</button>
+        <button id="modal-confirm" class="modal-btn danger">Confirm</button>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="js/main.js"></script>
 </body>

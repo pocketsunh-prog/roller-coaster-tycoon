@@ -117,6 +117,30 @@ class Game {
     this.ui.toast('Track cleared (full refund)');
   }
 
+  newGame() {
+    if (this.rideOpen) this.closeRide();
+    this.track.reset();
+    this.cash = START_CASH;
+    this.price = 5;
+    this.rideOpen = false;
+    this.model = DEFAULT_MODEL;
+    this.rides = 0;
+    this.selectedPiece = -1;
+    this.guests.clearQueue();
+    this.guests.guests.forEach(g => this.scene.remove(g.mesh));
+    this.guests.guests.length = 0;
+    this.guests.turnedAway = 0;
+    this.guests.served = 0;
+    this.train.rebuild(COASTER_MODELS[this.model]);
+    this.train.reset(this.track);
+    this.rebuildTrackMesh();
+    this.rebuildStation();
+    this.updateGhost();
+    this.updateSelectionMesh();
+    this.save(true);
+    this.ui.toast('New game started!');
+  }
+
   // Any structural change: close the ride, unload riders, reset the train
   onTrackEdited() {
     if (this.rideOpen) this.closeRide();

@@ -150,3 +150,29 @@ html, body {
   white-space: nowrap;
 }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ---------- Modal ---------- */
+#modal { position: fixed; inset: 0; z-index: 30; }
+#modal.hidden { display: none; }
+.modal-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.55); }
+.modal-box {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  background: #1a2230;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  padding: 22px 26px;
+  min-width: 280px; max-width: 380px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.modal-box p { color: #e8eef7; font-size: 15px; line-height: 1.5; margin-bottom: 18px; text-align: center; }
+.modal-btns { display: flex; gap: 10px; justify-content: center; }
+.modal-btn {
+  padding: 9px 22px;
+  border: none; border-radius: 9px;
+  background: #3a4a63; color: #fff;
+  font-size: 14px; font-weight: bold;
+  cursor: pointer; font-family: inherit;
+}
+.modal-btn:hover { background: #4c607f; }
+.modal-btn.danger { background: #c0392b; }
+.modal-btn.danger:hover { background: #d9443a; }
