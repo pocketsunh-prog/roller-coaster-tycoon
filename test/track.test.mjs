@@ -197,5 +197,37 @@ assert(JSON.stringify(restored.serialize()) === JSON.stringify(saved), 'serializ
 assert(restored.restore('garbage') === false, 'restore rejects non-array');
 assert(restored.restore([{ type: 'straight', gx: 0, gz: 0, dir: 0, level: 0 }]) === false, 'restore rejects missing station');
 
+// --- 6. Open ride state machine ----------------------------------------------
+console.log('Open ride:');
+const openTrack = buildLoop(FLAT_LOOP, 'open');
+// Simulate the Game.openRide() preconditions + state the UI status check relies on
+assert(openTrack.complete === true, 'track complete so ride can open');
+// rideOpen flag + train boarding state mirror Game.openRide / loop boarding logic
+let rideOpen = false;
+function openRide() {
+  if (!openTrack.complete) return false;
+  rideOpen = true;
+  openTrain.startBoarding();
+  return true;
+}
+const openTrain = new Train(new THREE.Scene());
+openTrain.reset(openTrack);
+assert(openRide() === true, 'openRide succeeds on complete track');
+assert(rideOpen === true, 'rideOpen flag set after opening');
+assert(openTrain.state === 'boarding', 'train is boarding after opening');
+// UI status rule: complete && rideOpen => OPEN (not CLOSED)
+const status = !openTrack.complete ? 'BUILDING' : rideOpen ? 'OPEN' : 'CLOSED';
+assert(status === 'OPEN', 'status shows OPEN when ride is open');
+// After a lap the train returns to boarding but ride stays open
+openTrain.riders = 4;
+openTrain.depart();
+let oArrived = false;
+openTrain.onArrive = () => { oArrived = true; };
+simTime = 0;
+while (simTime < 300 && !oArrived) { openTrain.update(1 / 60); simTime += 1 / 60; }
+assert(oArrived, 'train completed lap while ride open');
+assert(rideOpen === true, 'rideOpen still true after lap (ride stays open)');
+assert(openTrain.state === 'boarding', 'train back to boarding for next load');
+
 console.log(failures === 0 ? '\nALL TESTS PASSED' : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);

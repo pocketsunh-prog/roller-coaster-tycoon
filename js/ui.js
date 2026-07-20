@@ -20,16 +20,6 @@ export class UI {
     document.querySelectorAll('[data-model]').forEach(btn => {
       btn.addEventListener('click', () => game.setModel(btn.dataset.model));
     });
-    this.$('undoBtn').addEventListener('click', () => game.undo());
-    this.$('clearBtn').addEventListener('click', () => game.clearAll());
-    this.$('zoomInBtn').addEventListener('click', () => game.zoomIn());
-    this.$('zoomOutBtn').addEventListener('click', () => game.zoomOut());
-    this.$('saveBtn').addEventListener('click', () => game.save());
-    this.$('loadBtn').addEventListener('click', () => game.load());
-    this.openBtn.addEventListener('click', () => game.toggleOpen());
-    this.$('priceMinus').addEventListener('click', () => game.setPrice(-1));
-    this.$('pricePlus').addEventListener('click', () => game.setPrice(1));
-    this.$('helpBtn').addEventListener('click', () => this.$('help').classList.toggle('hidden'));
 
     // Confirm modal
     this.modalEl = this.$('modal');
