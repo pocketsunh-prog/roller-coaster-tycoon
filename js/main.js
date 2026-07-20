@@ -91,11 +91,28 @@ class Game {
   }
 
   showLoginGate() {
+    this.gateActive = true;
     this.authUI.open(true);
+    this.freezeGame(true);
   }
 
   hideLoginGate() {
+    this.gateActive = false;
     this.authUI.modal.classList.add('hidden');
+    this.freezeGame(false);
+  }
+
+  freezeGame(frozen) {
+    this._frozen = frozen;
+    const canvas = this.renderer.domElement;
+    canvas.style.opacity = frozen ? '0.15' : '1';
+    canvas.style.pointerEvents = frozen ? 'none' : '';
+    const lx = frozen ? 'none' : '';
+    const toolbar = document.getElementById('toolbar');
+    const hud = document.getElementById('hud');
+    if (toolbar) toolbar.style.pointerEvents = lx;
+    if (hud) hud.style.pointerEvents = lx;
+    document.body.style.overflow = frozen ? 'hidden' : '';
   }
 
   // --- Building -----------------------------------------------------------
@@ -537,7 +554,7 @@ class Game {
     }
 
     this.controls.update();
-    this.ui.update();
+    if (!this._frozen) this.ui.update();
     this.renderer.render(this.scene, this.camera);
   }
 }

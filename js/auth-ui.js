@@ -29,6 +29,8 @@ export class AuthUI {
     this.required = required;
     this.$('authCancel').style.display = required ? 'none' : '';
     this.modal.querySelector('.modal-backdrop').style.pointerEvents = required ? 'none' : '';
+    this.$('authGateMsg').style.display = required ? '' : 'none';
+    this.modal.classList.toggle('required', required);
     const user = auth.getUser();
     this.modal.classList.remove('hidden');
     if (user) {

@@ -197,3 +197,5 @@ html, body {
 .auth-input:focus { outline: none; border-color: #3f7fd9; }
 .auth-error { color: #ff8a8a; font-size: 12px; min-height: 16px; margin: 0 0 8px; }
 .auth-welcome { text-align: center; color: #7bf1a8; font-size: 14px; margin-bottom: 14px; }
+.auth-gate-msg { text-align: center; color: #ffd166; font-size: 15px; font-weight: bold; margin: 0 0 16px; }
+#authModal.required .modal-box { min-width: 340px; }
