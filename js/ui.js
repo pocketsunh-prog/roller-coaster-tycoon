@@ -8,6 +8,8 @@ export class UI {
     this.excitementEl = this.$('excitement');
     this.priceEl = this.$('price');
     this.speedEl = this.$('speed');
+    this.souvenirsEl = this.$('souvenirs');
+    this.shopBtn = this.$('shopBtn');
     this.openBtn = this.$('openBtn');
     this.toastEl = this.$('toast');
     this._toastTimer = null;
@@ -37,6 +39,7 @@ export class UI {
     this.$('zoomOutBtn').addEventListener('click', () => game.zoomOut());
     this.$('saveBtn').addEventListener('click', () => game.save());
     this.$('loadBtn').addEventListener('click', () => game.load());
+    this.shopBtn.addEventListener('click', () => game.toggleShop());
     this.openBtn.addEventListener('click', () => game.toggleOpen());
     this.$('priceMinus').addEventListener('click', () => game.setPrice(-1));
     this.$('pricePlus').addEventListener('click', () => game.setPrice(1));
@@ -70,6 +73,9 @@ export class UI {
     this.excitementEl.textContent = st.excitement;
     this.speedEl.textContent = g.train.state === 'running' ? g.train.speed.toFixed(1) : '0.0';
     this.priceEl.textContent = '$' + g.price;
+    this.souvenirsEl.textContent = g.souvenirs;
+    this.shopBtn.classList.toggle('selected', g.hasShop);
+    this.shopBtn.querySelector('.tool-name').textContent = g.hasShop ? 'Sell Shop' : 'Gift Shop';
 
     if (!g.track.complete) {
       this.statusEl.textContent = 'BUILDING';

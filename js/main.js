@@ -9,7 +9,8 @@ import { UI } from './ui.js';
 import { sfx } from './audio.js';
 import { auth } from './auth.js';
 import { AuthUI } from './auth-ui.js';
-import { START_CASH, COASTER_MODELS, DEFAULT_MODEL } from './config.js';
+import { buildGiftShop, disposeGiftShop } from './shop.js';
+import { START_CASH, COASTER_MODELS, DEFAULT_MODEL, GIFT_SHOP_COST, SOUVENIR_MIN, SOUVENIR_MAX } from './config.js';
 
 const PIECE_ORDER = ['straight', 'left', 'right', 'up', 'down', 'roll'];
 
@@ -48,6 +49,10 @@ class Game {
     this.selectionMesh = null;
     this._boardTimer = 0;
     this._departTimer = 0;
+    this.hasShop = false;
+    this.shop = null;
+    this.souvenirs = 0;
+    this._lastSaleSfx = 0;
 
     // World
     this.track = new Track();
@@ -167,6 +172,9 @@ class Game {
     this.guests.guests.length = 0;
     this.guests.turnedAway = 0;
     this.guests.served = 0;
+    this.hasShop = false;
+    this.syncShopMesh();
+    this.souvenirs = 0;
     this.train.rebuild(COASTER_MODELS[this.model]);
     this.train.reset(this.track);
     this.rebuildTrackMesh();
@@ -223,6 +231,51 @@ class Game {
     this.ui.toast(COASTER_MODELS[id].name + ' coaster selected');
     sfx.place();
     this.save(true); // autosave
+  }
+
+  // --- Gift shop -----------------------------------------------------------
+
+  toggleShop() {
+    if (!this.loggedIn) { this.showLoginGate(); return; }
+    if (this.hasShop) this.sellShop();
+    else this.buyShop();
+    this.save(true); // autosave
+  }
+
+  buyShop() {
+    if (this.cash < GIFT_SHOP_COST) { this.ui.toast('Not enough cash!'); sfx.error(); return; }
+    this.cash -= GIFT_SHOP_COST;
+    this.hasShop = true;
+    this.syncShopMesh();
+    sfx.place();
+    this.ui.toast('Gift shop built! Riders will buy souvenirs.');
+  }
+
+  sellShop() {
+    this.hasShop = false;
+    this.syncShopMesh();
+    this.cash += GIFT_SHOP_COST;
+    sfx.undo();
+    this.ui.toast('Gift shop sold (full refund)');
+  }
+
+  syncShopMesh() {
+    if (this.shop) {
+      this.scene.remove(this.shop);
+      disposeGiftShop(this.shop);
+      this.shop = null;
+    }
+    if (this.hasShop) {
+      this.shop = buildGiftShop();
+      this.scene.add(this.shop);
+    }
+  }
+
+  onSouvenirSale() {
+    this.cash += SOUVENIR_MIN + Math.floor(Math.random() * (SOUVENIR_MAX - SOUVENIR_MIN + 1));
+    this.souvenirs++;
+    const now = performance.now();
+    if (now - this._lastSaleSfx > 500) { sfx.cash(); this._lastSaleSfx = now; }
   }
 
   updateGhost() {
@@ -369,6 +422,8 @@ class Game {
       rides: this.rides,
       rideOpen: this.rideOpen,
       model: this.model,
+      hasShop: this.hasShop,
+      souvenirs: this.souvenirs,
     };
   }
 
@@ -384,6 +439,9 @@ class Game {
     this.price = Math.max(1, Math.min(20, data.price || 5));
     this.rides = data.rides || 0;
     this.model = COASTER_MODELS[data.model] ? data.model : DEFAULT_MODEL;
+    this.hasShop = !!data.hasShop;
+    this.souvenirs = data.souvenirs || 0;
+    this.syncShopMesh();
     this.train.rebuild(COASTER_MODELS[this.model]);
     this.train.reset(this.track);
     this.rebuildTrackMesh();
@@ -404,6 +462,9 @@ class Game {
     this.rideOpen = false;
     this.model = DEFAULT_MODEL;
     this.selectedPiece = -1;
+    this.hasShop = false;
+    this.syncShopMesh();
+    this.souvenirs = 0;
     this.train.rebuild(COASTER_MODELS[this.model]);
     this.train.reset(this.track);
     this.rebuildTrackMesh();
@@ -511,6 +572,7 @@ class Game {
       case 'u': this.undo(); break;
       case 'c': this.clearAll(); break;
       case 'o': this.toggleOpen(); break;
+      case 'g': this.toggleShop(); break;
       case 'z': this.zoomIn(); break;
       case 'x': this.zoomOut(); break;
       case 'v': this.save(); break;

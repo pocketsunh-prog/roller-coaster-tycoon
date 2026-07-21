@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { GUEST_CAP, QUEUE_CAP } from './config.js';
+import { GUEST_CAP, QUEUE_CAP, SOUVENIR_CHANCE } from './config.js';
+import { SHOP_STOP } from './shop.js';
 
 const GATE = new THREE.Vector3(-30, 0, 12);
 const CORNER = new THREE.Vector3(3, 0, 12);
@@ -91,12 +92,13 @@ class Guest {
     this.arms = parts.arms;
     this.legs = parts.legs;
     this.mesh.position.copy(pos);
-    this.state = state; // entering | deciding | toQueue | queuing | boarding | leaving
+    this.state = state; // entering | deciding | toQueue | queuing | boarding | exiting | toShop | shopping | leaving
     this.speed = 2.2 + Math.random() * 0.9;
     this.budget = 3 + Math.floor(Math.random() * 13); // $3..$15
     this.bob = Math.random() * 10;
     this.target = null;
     this.queueIndex = -1;
+    this.dwell = 0;
     scene.add(this.mesh);
   }
 
@@ -108,6 +110,7 @@ class Guest {
   }
 
   update(dt) {
+    if (this.dwell > 0) { this.dwell -= dt; return; }
     if (!this.target) return;
     const p = this.mesh.position;
     const dx = this.target.x - p.x, dz = this.target.z - p.z;
@@ -189,6 +192,21 @@ export class GuestSystem {
           this.game.onGuestBoarded();
           break;
         case 'exiting':
+          if (this.game.hasShop && Math.random() < SOUVENIR_CHANCE) {
+            guest.state = 'toShop';
+            guest.target = SHOP_STOP.clone();
+          } else {
+            guest.state = 'leaving';
+            guest.target = GATE.clone();
+          }
+          break;
+        case 'toShop':
+          guest.state = 'shopping';
+          guest.target = null;
+          guest.dwell = 0.8;
+          this.game.onSouvenirSale();
+          break;
+        case 'shopping':
           guest.state = 'leaving';
           guest.target = GATE.clone();
           break;

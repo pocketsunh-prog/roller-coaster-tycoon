@@ -21,6 +21,12 @@ export const SEATS_PER_CAR = 4;
 export const GUEST_CAP = 560;
 export const QUEUE_CAP = 100;
 
+// Gift shop
+export const GIFT_SHOP_COST = 500;
+export const SOUVENIR_MIN = 4;     // min cash per souvenir sale
+export const SOUVENIR_MAX = 10;    // max cash per souvenir sale
+export const SOUVENIR_CHANCE = 0.6; // share of riders who buy after a ride
+
 // Coaster models: visuals + physics tweaks
 export const COASTER_MODELS = {
   steel: {

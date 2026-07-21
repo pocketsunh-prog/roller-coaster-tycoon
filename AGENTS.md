@@ -37,7 +37,8 @@ Coaster Tycoon 3D is a browser-based 3D roller-coaster tycoon game built with Th
 | `js/track.js` | Track model: piece types, placement rules, path geometry |
 | `js/trackmesh.js` | Instanced rail/tie/support meshes + ghost preview rendering (model-aware) |
 | `js/train.js` | Train physics: gravity, friction, chain lift, banking, braking, scream triggers; model-specific car detail |
-| `js/guests.js` | Guest AI: spawning, queueing, boarding, budget decisions |
+| `js/guests.js` | Guest AI: spawning, queueing, boarding, budget decisions, gift shop visits |
+| `js/shop.js` | Gift shop: building mesh, shop/stop positions |
 | `js/scenery.js` | Ground, grid, lights, sky, trees, clouds, entrance path |
 | `js/ui.js` | HUD updates, toast notifications, toolbar event wiring |
 | `js/audio.js` | Procedural WebAudio SFX (no audio assets) |
@@ -67,4 +68,5 @@ Coaster Tycoon 3D is a browser-based 3D roller-coaster tycoon game built with Th
 - Complete a circuit back to the station to open the ride
 - Train runs with gravity-driven physics; chain lifts pull uphill; riders scream on hill crests, steep drops, and fast rolls
 - Guests spawn based on excitement rating, queue, board, pay tickets
+- Build a gift shop ($500, key G, full refund when sold) — after a ride, ~60% of riders stop to buy a $4–$10 souvenir; saved with the game
 - Economy: start with $5,000, pieces cost $40–$120, undo gives full refund

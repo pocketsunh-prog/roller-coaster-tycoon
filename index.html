@@ -21,6 +21,7 @@
   <div id="hud">
     <div class="stat"><span class="stat-label">Cash</span><span class="stat-value cash" id="cash">$5,000</span></div>
     <div class="stat"><span class="stat-label">Guests</span><span class="stat-value" id="guests">0</span></div>
+    <div class="stat"><span class="stat-label">Souvenirs</span><span class="stat-value" id="souvenirs">0</span></div>
     <div class="stat"><span class="stat-label">Status</span><span class="stat-value status-building" id="status">BUILDING</span></div>
     <div class="stat"><span class="stat-label">Excitement</span><span class="stat-value" id="excitement">5</span></div>
     <div class="stat"><span class="stat-label">Speed</span><span class="stat-value" id="speed">0.0</span></div>
@@ -54,7 +55,8 @@
       <li><b>1-6</b> place piece &nbsp; <b>Q/E</b> cycle piece &nbsp; <b>Enter</b> place selected</li>
       <li><b>Click</b> a piece to select it &nbsp; <b>1-6</b> replace &nbsp; <b>Del</b> remove &nbsp; <b>Esc</b> deselect</li>
       <li><b>U</b> undo &nbsp; <b>C</b> clear &nbsp; <b>O</b> open/close ride &nbsp; <b>-/+</b> ticket price</li>
-      <li><b>Z</b> zoom in &nbsp; <b>X</b> zoom out &nbsp; <b>V</b> save &nbsp; <b>L</b> load</li>
+      <li><b>Z</b> zoom in &nbsp; <b>X</b> zoom out &nbsp; <b>V</b> save &nbsp; <b>L</b> load &nbsp; <b>G</b> gift shop</li>
+      <li>Build a gift shop ($500) — riders stop for souvenirs after their ride.</li>
       <li><b>Mouse</b> drag = rotate, wheel = zoom, right-drag = pan, click ghost = build</li>
       <li>Up slopes have chain lifts. Higher ticket price = fewer guests willing to pay.</li>
       <li>Pick a coaster model (Steel / Wooden / Hyper) — each has its own look and speed.</li>
@@ -75,6 +77,9 @@
       <button class="tool model-tool selected" data-model="steel"><span class="swatch" style="background:#d84545"></span><span class="tool-name">Steel</span></button>
       <button class="tool model-tool" data-model="wooden"><span class="swatch" style="background:#8b5e34"></span><span class="tool-name">Wooden</span></button>
       <button class="tool model-tool" data-model="hyper"><span class="swatch" style="background:#3f7fd9"></span><span class="tool-name">Hyper</span></button>
+    </div>
+    <div class="tool-group">
+      <button id="shopBtn" class="tool action"><span class="tool-icon">&#127978;</span><span class="tool-name">Gift Shop</span><span class="tool-cost">$500</span><span class="tool-key">G</span></button>
     </div>
     <div class="tool-group">
       <button id="undoBtn" class="tool action"><span class="tool-name">Undo</span><span class="tool-key">U</span></button>
